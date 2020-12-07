@@ -66,6 +66,7 @@ public:
             break;
 
         default:
+            result = false;
             break;
         }
 
@@ -128,6 +129,9 @@ public:
             digitalWrite(negativePin, LOW);
             break;
         }
+
+        // return positive indication
+        return true;
     }
 
 private:

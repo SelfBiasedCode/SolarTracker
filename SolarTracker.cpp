@@ -19,7 +19,63 @@ int16_t SolarTracker::calcElevationError() const
     return (m_topLeftVal + m_topRightVal) - (m_topRightVal + m_bottomLeftVal);
 }
 
-void SolarTracker::process()
+void SolarTracker::smoothPwm(uint8_t* lastPwmValue, uint8_t& pwmTarget)
+{
+    uint8_t maxChange;
+    if (pwmTarget > *lastPwmValue)
+    {
+        maxChange = (*lastPwmValue + m_maxPwmStep);
+        if (maxChange > pwmTarget)
+        {
+            pwmTarget = maxChange;
+        }
+    }
+    else
+    {
+        maxChange = (*lastPwmValue - m_maxPwmStep);
+        if (maxChange < pwmTarget)
+        {
+            pwmTarget = maxChange;
+        }
+    }
+
+    *lastPwmValue = pwmTarget;
+}
+
+void SolarTracker::executeCorrection(int16_t* error, uint8_t* lastPwmValue, L298N_Driver::Channel channel)
+{
+    L298N_Driver::Command direction;
+    uint8_t pwmTarget;
+    bool isNegative = (*error < 0);
+
+    if (isNegative)
+    {
+        *error *= -1;
+        direction = L298N_Driver::Command::Negative;
+    }
+    else
+    {
+        direction = L298N_Driver::Command::Positive;
+    }
+
+    if (*error > m_tolerance)
+    {
+        pwmTarget = calcPwmValue((uint16_t&)*error);
+    }
+    else
+    {
+        pwmTarget = 0;
+        direction = L298N_Driver::Command::Off;
+    }
+
+    // modify last value in-place
+    smoothPwm(lastPwmValue, pwmTarget);
+
+    // execute
+    m_driver->exec(channel, direction, *lastPwmValue);
+}
+
+void SolarTracker::autoAdjust()
 {
     // get measurement data
     readLdrs();
@@ -39,111 +95,67 @@ void SolarTracker::process()
     int16_t azimuthError = calcAzimuthError();
     int16_t elevationError = calcElevationError();
 
-    // apply correction
-    if (azimuthError > m_tolerance)
-    {
-        bool isNegative = (azimuthError < 0);
-        L298N_Driver::Command direction;
-        if (isNegative)
-        {
-            azimuthError *= -1;
-            direction = L298N_Driver::Command::Negative;
-        }
-        else
-        {
-            direction = L298N_Driver::Command::Positive;
-        }
+    // Azimuth correction
+    executeCorrection(&azimuthError, &m_lastPwmValue_azi, m_azimuthChannel);
 
-        uint8_t pwmValue = calcPwmValue((uint16_t&)azimuthError);
-
-        // this calculation may overflow without negative effects
-        uint8_t maxIncrease = (m_lastPwmValue_azi + m_maxPwmStep);
-        if (maxIncrease > pwmValue)
-        {
-            pwmValue = maxIncrease;
-        }
-
-        m_lastPwmValue_azi = pwmValue;
-        m_driver->exec(m_azimuthChannel, direction, pwmValue);
-    }
-    else
-    {
-        // disable motor
-        m_driver->exec(m_azimuthChannel, L298N_Driver::Command::Off);
-    }
-
-    if (elevationError > m_tolerance)
-    {
-        bool isNegative = (elevationError < 0);
-        L298N_Driver::Command direction;
-        if (isNegative)
-        {
-            elevationError *= -1;
-            direction = L298N_Driver::Command::Negative;
-        }
-        else
-        {
-            direction = L298N_Driver::Command::Positive;
-        }
-
-        uint8_t pwmValue = calcPwmValue((uint16_t&)elevationError);
-
-        // this calculation may overflow without negative effects
-        uint8_t maxIncrease = (m_lastPwmValue_ele + m_maxPwmStep);
-        if (maxIncrease > pwmValue)
-        {
-            pwmValue = maxIncrease;
-        }
-        m_lastPwmValue_ele = pwmValue;
-        m_driver->exec(m_elevationChannel, direction, pwmValue);
-    }
-    else
-    {
-        // disable motor
-        m_driver->exec(m_elevationChannel, L298N_Driver::Command::Off);
-    }
+    // Elevation correction
+    executeCorrection(&elevationError, &m_lastPwmValue_ele, m_elevationChannel);
 }
 
 uint8_t SolarTracker::calcPwmValue(uint16_t& error) const
 {
+    // apply P-factor
     uint16_t value = error >> m_Kp_shift;
+
+    // saturate
+    if (value > 255)
+    {
+        value = 255;
+    }
+
+    // convert and return
     return (uint8_t)(value & 0x00FF);
 }
 
-void SolarTracker::manualAzimuth(Direction direction) const
+void SolarTracker::manualAdjust(Axis axis, Direction direction)
 {
-    switch (direction)
+    L298N_Driver::Channel channel;
+    uint8_t* lastPwmValue;
+    switch (axis)
     {
-    case Direction::Positive:
-        m_driver->exec(m_azimuthChannel, L298N_Driver::Command::Positive, m_speedManual);
+    case Axis::Azimuth:
+        channel = m_azimuthChannel;
+        lastPwmValue = &m_lastPwmValue_azi;
         break;
-
-    case Direction::Negative:
-        m_driver->exec(m_azimuthChannel, L298N_Driver::Command::Negative, m_speedManual);
+    case Axis::Elevation:
+        channel = m_elevationChannel;
+        lastPwmValue = &m_lastPwmValue_ele;
         break;
-
-    case Direction::Stop:
     default:
-        m_driver->exec(m_azimuthChannel, L298N_Driver::Command::Off);
-        break;
+        return;
     }
-}
 
-void SolarTracker::manualElevation(Direction direction) const
-{
+    // do not allow manual movement before stopping automatic movemennt
+    if (*lastPwmValue > 0)
+    {
+        executeCorrection(0, lastPwmValue, channel);
+        return;
+    }
+
+    // execute movement
     switch (direction)
     {
     case Direction::Positive:
-        m_driver->exec(m_elevationChannel, L298N_Driver::Command::Positive, m_speedManual);
+        m_driver->exec(channel, L298N_Driver::Command::Positive, m_speedManual);
         break;
 
     case Direction::Negative:
-        m_driver->exec(m_elevationChannel, L298N_Driver::Command::Negative, m_speedManual);
+        m_driver->exec(channel, L298N_Driver::Command::Negative, m_speedManual);
         break;
 
     case Direction::Stop:
     default:
-        m_driver->exec(m_elevationChannel, L298N_Driver::Command::Off);
+        m_driver->exec(channel, L298N_Driver::Command::Off);
         break;
     }
 }

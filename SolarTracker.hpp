@@ -15,10 +15,11 @@ public:
     }
 
     enum class Direction : uint8_t { Positive, Negative, Stop };
+    enum class Axis : uint8_t { Azimuth, Elevation };
 
-    void process();
-    void manualAzimuth(Direction direction) const;
-    void manualElevation(Direction direction) const;
+    void autoAdjust();
+    void SolarTracker::manualAdjust(Axis axis, Direction direction);
+
 
 private:
     // methods
@@ -26,6 +27,8 @@ private:
     int16_t calcAzimuthError() const;
     int16_t calcElevationError() const;
     uint8_t calcPwmValue(uint16_t& error) const;
+    void executeCorrection(int16_t* error, uint8_t* lastPwmValue, L298N_Driver::Channel channel);
+    void smoothPwm(uint8_t* lastPwmValue, uint8_t& pwmTarget);
 
     // most recent data
     uint8_t m_topLeftVal;

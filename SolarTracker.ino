@@ -95,36 +95,36 @@ void loop()
   // movement
   if (autoMode)
   {
-    tracker.process();
+    tracker.autoAdjust();
   }
   else
   {
     // East/West
     if (leftPressed)
     {
-      tracker.manualAzimuth(SolarTracker::Direction::Positive);
+      tracker.manualAdjust(SolarTracker::Axis::Azimuth, SolarTracker::Direction::Positive);
     }
     else if (rightPressed)
     {
-      tracker.manualAzimuth(SolarTracker::Direction::Negative);
+      tracker.manualAdjust(SolarTracker::Axis::Azimuth, SolarTracker::Direction::Negative);
     }
     else
     {
-      tracker.manualAzimuth(SolarTracker::Direction::Stop);
+      tracker.manualAdjust(SolarTracker::Axis::Azimuth, SolarTracker::Direction::Stop);
     }
 
     // Up/Down
     if (upPressed)
     {
-      tracker.manualElevation(SolarTracker::Direction::Positive);
+      tracker.manualAdjust(SolarTracker::Axis::Elevation, SolarTracker::Direction::Positive);
     }
     else if (downPressed)
     {
-      tracker.manualElevation(SolarTracker::Direction::Negative);
+      tracker.manualAdjust(SolarTracker::Axis::Elevation, SolarTracker::Direction::Negative);
     }
     else
     {
-      tracker.manualElevation(SolarTracker::Direction::Stop);
+      tracker.manualAdjust(SolarTracker::Axis::Elevation, SolarTracker::Direction::Stop);
     }
   }
 
