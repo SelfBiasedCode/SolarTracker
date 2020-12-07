@@ -1,53 +1,55 @@
 #ifndef SOLAR_TRACKER_H
 #define SOLAR_TRACKER_H
 
+#include "SolarTrackerConfig.hpp"
+#include "L298N_Driver.hpp"
+
 class SolarTracker
 {
 public:
-	SolarTracker(uint8_t azimuthMotorPin, uint8_t elevationMotorPin, uint8_t topLeftLdrPin, uint8_t topRightLdrPin, uint8_t bottomLeftLdrPin, uint8_t bottomRightLdrPin, uint8_t statusLedPin) :
-		m_azimuthPin(azimuthMotorPin), m_elevationPin(elevationMotorPin), m_topLeftPin(topLeftLdrPin), topRightLdrPin(topRightLdrPin), m_bottomLeftPin(bottomLeftLdrPin), m_bottomRightPin(bottomRightLdrPin), m_statusLedPin(statusLedPin)
-	{}
+    SolarTracker(SolarTrackerConfig config) :m_config(config)
+    {
+        m_driver = new L298N_Driver(m_config.motor_azimuth_signalPin, m_config.motor_azimuth_positivePin, m_config.motor_azimuth_negativePin, m_config.motor_elevation_signalPin, m_config.motor_elevation_positivePin, m_config.motor_elevation_negativePin);
+        m_lastPwmValue_azi = 0;
+        m_lastPwmValue_ele = 0;
+    }
 
-	void process();
-	void moveWest();
-	void moveEast();
-	void moveUp();
-	void moveDown();
+    enum class Direction : uint8_t { Positive, Negative, Stop };
+
+    void process();
+    void manualAzimuth(Direction direction) const;
+    void manualElevation(Direction direction) const;
 
 private:
-	void readLdrs();
+    // methods
+    void readLdrs();
+    int16_t calcAzimuthError() const;
+    int16_t calcElevationError() const;
+    uint8_t calcPwmValue(uint16_t& error) const;
 
-	int16_t calcAzimuthError();
-	int16_t calcElevationError();
-	uint8_t calcPwmValue(int16_t& error)
+    // most recent data
+    uint8_t m_topLeftVal;
+    uint8_t m_topRightVal;
+    uint8_t m_bottomLeftVal;
+    uint8_t m_bottomRightVal;
+    uint8_t m_lastPwmValue_azi;
+    uint8_t m_lastPwmValue_ele;
 
-	// most recent data
-	uint8_t m_topLeftVal;
-	uint8_t m_topRightVal;
-	uint8_t m_bottomLeftVal;
-	uint8_t m_bottomRightVal;
+    // config
+    SolarTrackerConfig m_config;
 
-	/* pins */
-	// LDRs
-	uint8_t m_topLeftPin;
-	uint8_t m_topRightPin;
-	uint8_t m_bottomLeftPin;
-	uint8_t m_bottomRightPin;
+    // driver
+    L298N_Driver* m_driver;
 
-	// motors
-	uint8_t m_azimuthPin;
-	uint8_t m_elevationPin;
+    // constants
+    static const uint8_t m_tolerance = 10;
+    static const uint16_t m_shadowLevel = 100;
+    static const uint8_t m_speedManual = 100;
+    static const uint8_t m_Kp_shift = 1;
+    static const uint8_t m_maxPwmStep = 25;
 
-	// status LED
-	uint8_t m_statusLedPin;
-
-	// constants
-	static const uint8_t m_tolerance = 10;
-	static const uint8_t m_speedFast = 250;
-	static const uint8_t m_speedSlow = 50;
-	static const uint8_t m_speedManual = 100;
-	static const uint8_t m_speedSwitchover = 20;
-
+    static const L298N_Driver::Channel m_azimuthChannel = L298N_Driver::Channel::Ch1;
+    static const L298N_Driver::Channel m_elevationChannel = L298N_Driver::Channel::Ch2;
 };
 
 #endif
