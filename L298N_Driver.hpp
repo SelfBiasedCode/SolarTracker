@@ -3,6 +3,8 @@
 
 #include "Arduino.h"
 
+#define SENSE_INVERT
+
 class L298N_Driver
 {
 public:
@@ -76,13 +78,16 @@ public:
     bool exec(Channel channel, Command cmd, uint8_t dutyCycle = 0)
     {
         // test if the requested action is allowed
+
         bool allowed = sense(channel, cmd);
 
-        if (!allowed)
-        {
-            return false;
-        }
+#ifdef SENSE_INVERT
+        if (allowed) return false;
+#else
+        if (!allowed) return false;
+#endif
 
+        // processing variables
         uint8_t enPin;
         uint8_t positivePin;
         uint8_t negativePin;

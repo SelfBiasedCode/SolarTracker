@@ -16,8 +16,6 @@ struct SolarTrackerConfig
     uint8_t motor_elevation_signalPin;
     uint8_t motor_elevation_positivePin;
     uint8_t motor_elevation_negativePin;
-
-    uint8_t led_status_pin;
 };
 
 #endif

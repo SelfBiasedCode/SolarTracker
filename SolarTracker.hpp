@@ -18,7 +18,7 @@ public:
     enum class Axis : uint8_t { Azimuth, Elevation };
 
     void autoAdjust();
-    void SolarTracker::manualAdjust(Axis axis, Direction direction);
+    void manualAdjust(Axis axis, Direction direction);
 
 
 private:

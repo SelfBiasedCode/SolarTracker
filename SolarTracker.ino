@@ -23,11 +23,8 @@
 #define SWITCHES_PIN A0
 LiquidCrystal lcd(8, 9, 4, 5, 6, 7);
 
-#define LED_STATUS_PIN 0
 
-#define MODE_SWITCH_INVOCATION_COUNT 10
-
-/* SolarTracker */
+// SolarTracker
 static const SolarTrackerConfig trackerConfig =
 {
 ldr_topLeftPin: LDR_TOPLEFT_PIN,
@@ -40,21 +37,21 @@ motor_azimuth_negativePin: MOTOR_AZIMUTH_NEG,
 motor_elevation_signalPin: MOTOR_ELEVATION_SIG_PIN,
 motor_elevation_positivePin: MOTOR_ELEVATION_POS,
 motor_elevation_negativePin: MOTOR_ELEVATION_NEG,
-led_status_pin: LED_STATUS_PIN
 };
-
 SolarTracker tracker(trackerConfig);
 
+// UI
 uint8_t buttonCounter;
 bool autoMode;
+#define MODE_SWITCH_INVOCATION_COUNT 10
 
 void setup()
 {
   buttonCounter = 0;
   autoMode = true;
 
-  lcd.begin(16, 2);              // start the library
-  
+  // initialize lcd
+  lcd.begin(16, 2);
 }
 
 Button readButtonInputs()
@@ -63,50 +60,50 @@ Button readButtonInputs()
   uint16_t inputValue = analogRead(SWITCHES_PIN);
 
   // return button based on value
-  if (adc_key_in > 1000) return Button.None;
-  if (adc_key_in < 50)   return Button.Right;
-  if (adc_key_in < 195)  return Button.Up;
-  if (adc_key_in < 380)  return Button.Down;
-  if (adc_key_in < 555)  return Button.Left;
-  if (adc_key_in < 790)  return Button.Select;
+  if (inputValue > 1000) return Button::None;
+  if (inputValue < 50)   return Button::Right;
+  if (inputValue < 195)  return Button::Up;
+  if (inputValue < 380)  return Button::Down;
+  if (inputValue < 555)  return Button::Left;
+  if (inputValue < 790)  return Button::Select;
 
   // fail
-  return Button.None;
+  return Button::None;
 }
 
 void loop()
 {
+  // UI variables
   bool skipMovement = false;
+  DisplayLine1 line1 = DisplayLine1::Auto;
+  DisplayLine2Full line2 = DisplayLine2Full::None;
+  SolarTracker::Direction aziDirection = SolarTracker::Direction::Stop;
+  SolarTracker::Direction eleDirection = SolarTracker::Direction::Stop;
 
   // get button states
   Button buttonPressed = readButtonInputs();
-
-  lcd.clear();
 
   // mode selection
   if (autoMode)
   {
     // if auto mode is active, switch to manual if a button was pressed
-    autoMode = buttonPressed == None;
+    autoMode = buttonPressed == Button::None;
 
     buttonCounter = 0;
-    lcd.setCursor(0, 0);
-    lcd.print("Mode: Auto");
+    line1 = DisplayLine1::Auto;
   }
   else
   {
-    lcd.setCursor(0, 0);
-    lcd.print("Mode: Manual");
+    line1 = DisplayLine1::Manual;
 
     // auto mode inactive: switch back if left and right buttons are pressed for a certain number of invocations
-    if (buttonPressed == Button.Select)
+    if (buttonPressed == Button::Select)
     {
       buttonCounter++;
 
-      // reset button state to prevent movement in the following code
-      buttonPressed = Button.None;
-      lcd.setCursor(0, 1);
-      lcd.print("Hold for Auto...");
+      // prevent movement and inform user
+      skipMovement = true;
+      line2 = DisplayLine2Full::HoldForAuto;
     }
     else
     {
@@ -128,46 +125,97 @@ void loop()
   else if (!skipMovement)
   {
     // East/West
-    if (buttonPressed == Button.Left)
+    switch (buttonPressed)
     {
-      tracker.manualAdjust(SolarTracker::Axis::Azimuth, SolarTracker::Direction::Positive);
-      lcd.setCursor(0, 1);
-      lcd.print("Azi Pos");
-    }
-    else if (buttonPressed == Button.Right)
-    {
-      tracker.manualAdjust(SolarTracker::Axis::Azimuth, SolarTracker::Direction::Negative);
-      lcd.setCursor(0, 1);
-      lcd.print("Azi Neg");
-    }
-    else
-    {
-      tracker.manualAdjust(SolarTracker::Axis::Azimuth, SolarTracker::Direction::Stop);
-      lcd.setCursor(0, 1);
-      lcd.print("Azi Off");
+      case Button::Left:
+        aziDirection = SolarTracker::Direction::Positive;
+        break;
+      case Button::Right:
+        aziDirection = SolarTracker::Direction::Negative;
+        break;
+      default:
+        aziDirection = SolarTracker::Direction::Stop;
+        break;
     }
 
     // Up/Down
-    if (buttonPressed == Button.Up)
+    switch (buttonPressed)
     {
-      tracker.manualAdjust(SolarTracker::Axis::Elevation, SolarTracker::Direction::Positive);
-      lcd.setCursor(9, 1);
-      lcd.print("Ele Pos");
+      case Button::Up:
+        eleDirection = SolarTracker::Direction::Positive;
+        break;
+      case Button::Down:
+        eleDirection = SolarTracker::Direction::Negative;
+        break;
+      default:
+        eleDirection = SolarTracker::Direction::Stop;
+        break;
     }
-    else if (buttonPressed == Button.Down)
-    {
-      tracker.manualAdjust(SolarTracker::Axis::Elevation, SolarTracker::Direction::Negative);
-      lcd.setCursor(9, 1);
-      lcd.print("Ele Neg");
-    }
-    else
-    {
-      tracker.manualAdjust(SolarTracker::Axis::Elevation, SolarTracker::Direction::Stop);
-      lcd.setCursor(9, 1);
-      lcd.print("Ele Off");
-    }
+
+    // execute manual movement
+    tracker.manualAdjust(SolarTracker::Axis::Azimuth, aziDirection);
+    tracker.manualAdjust(SolarTracker::Axis::Elevation, eleDirection);
+  }
+
+  // display output
+
+  // write line 1 with all 16 chars
+  lcd.setCursor(0, 0);
+  switch (line1)
+  {
+    case DisplayLine1::Auto:
+      lcd.print("Mode: Auto      ");
+      break;
+
+    case DisplayLine1::Manual:
+      lcd.print("Mode: Manual    ");
+      break;
+  }
+
+  switch (line2)
+  {
+    // special case: No split line
+    case DisplayLine2Full::HoldForAuto:
+      lcd.setCursor(0, 1);
+      lcd.print("Hold for Auto...");
+      break;
+
+    // standard case: Split line
+    default:
+      printLine2(aziDirection, eleDirection);
+      break;
   }
 
   // loop throttling
   delay(100);
+}
+
+
+void printLine2(SolarTracker::Direction aziDir, SolarTracker::Direction eleDir)
+{
+  lcd.setCursor(0, 1);
+  lcd.print("Azi "); // 4
+  lcd.setCursor(4, 1); // TODO: Can this be removed?
+  printDirectionToString(aziDir); // 3
+  lcd.print(" "); // 1
+  lcd.setCursor(8, 1); // TODO: Can this be removed?
+  lcd.print("Ele "); // 4
+  lcd.setCursor(12, 1); // TODO: Can this be removed?
+  printDirectionToString(eleDir); // 3
+}
+
+void printDirectionToString(SolarTracker::Direction dir)
+{
+  switch (dir)
+  {
+    case SolarTracker::Direction::Positive:
+      lcd.print("Pos ");
+      break;
+    case SolarTracker::Direction::Negative:
+      lcd.print("Neg ");
+      break;
+    case SolarTracker::Direction::Stop:
+      lcd.print("Off ");
+      break;
+  }
 }

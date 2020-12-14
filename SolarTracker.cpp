@@ -135,12 +135,14 @@ void SolarTracker::manualAdjust(Axis axis, Direction direction)
         return;
     }
 
-    // do not allow manual movement before stopping automatic movemennt
+    // do not allow manual movement before stopping automatic movement
+    /*
     if (*lastPwmValue > 0)
     {
         executeCorrection(0, lastPwmValue, channel);
         return;
     }
+    */
 
     // execute movement
     switch (direction)
