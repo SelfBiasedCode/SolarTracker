@@ -1,3 +1,7 @@
+# LTSpice
+*.raw
+*.log
+
 # Visual Studio
 .vs/
 

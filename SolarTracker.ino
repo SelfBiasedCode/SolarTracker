@@ -1,31 +1,31 @@
+#include <LiquidCrystal.h>
 #include "SolarTracker.hpp"
-
-// digital inputs
-#define BUTTON_LEFT_PIN 4
-#define BUTTON_RIGHT_PIN 7
-#define BUTTON_UP_PIN 8
-#define BUTTON_DOWN_PIN 9
+#include "Button.hpp"
+#include "DisplayText.hpp"
 
 // analog inputs
-#define LDR_TOPLEFT_PIN A0
-#define LDR_TOPRIGHT_PIN A1
-#define LDR_BOTLEFT_PIN A2
-#define LDR_BOTRIGHT_PIN A3
+#define LDR_TOPLEFT_PIN A1
+#define LDR_TOPRIGHT_PIN A2
+#define LDR_BOTLEFT_PIN A3
+#define LDR_BOTRIGHT_PIN A4
 
 // digital outputs
-#define MOTOR_AZIMUTH_POS 2
-#define MOTOR_AZIMUTH_NEG 3
+#define MOTOR_AZIMUTH_POS 14
+#define MOTOR_AZIMUTH_NEG 15
 #define MOTOR_ELEVATION_POS A6
 #define MOTOR_ELEVATION_NEG A7
 
 // PWM outputs
-#define MOTOR_AZIMUTH_SIG_PIN 5
-#define MOTOR_ELEVATION_SIG_PIN 6
+#define MOTOR_AZIMUTH_SIG_PIN 2
+#define MOTOR_ELEVATION_SIG_PIN 3
 
+// LCD Shield
+#define SWITCHES_PIN A0
+LiquidCrystal lcd(8, 9, 4, 5, 6, 7);
 
 #define LED_STATUS_PIN 0
 
-#define MODE_SWITCH_INVOCATION_COUNT 50
+#define MODE_SWITCH_INVOCATION_COUNT 10
 
 /* SolarTracker */
 static const SolarTrackerConfig trackerConfig =
@@ -52,33 +52,61 @@ void setup()
 {
   buttonCounter = 0;
   autoMode = true;
+
+  lcd.begin(16, 2);              // start the library
+  
+}
+
+Button readButtonInputs()
+{
+  // read value from ADC
+  uint16_t inputValue = analogRead(SWITCHES_PIN);
+
+  // return button based on value
+  if (adc_key_in > 1000) return Button.None;
+  if (adc_key_in < 50)   return Button.Right;
+  if (adc_key_in < 195)  return Button.Up;
+  if (adc_key_in < 380)  return Button.Down;
+  if (adc_key_in < 555)  return Button.Left;
+  if (adc_key_in < 790)  return Button.Select;
+
+  // fail
+  return Button.None;
 }
 
 void loop()
 {
+  bool skipMovement = false;
+
   // get button states
-  bool leftPressed = digitalRead(BUTTON_LEFT_PIN);
-  bool rightPressed = digitalRead(BUTTON_RIGHT_PIN);
-  bool upPressed = digitalRead(BUTTON_UP_PIN);
-  bool downPressed = digitalRead(BUTTON_DOWN_PIN);
+  Button buttonPressed = readButtonInputs();
+
+  lcd.clear();
 
   // mode selection
   if (autoMode)
   {
     // if auto mode is active, switch to manual if a button was pressed
-    autoMode = !(leftPressed | rightPressed | upPressed | downPressed);
+    autoMode = buttonPressed == None;
+
     buttonCounter = 0;
+    lcd.setCursor(0, 0);
+    lcd.print("Mode: Auto");
   }
   else
   {
+    lcd.setCursor(0, 0);
+    lcd.print("Mode: Manual");
+
     // auto mode inactive: switch back if left and right buttons are pressed for a certain number of invocations
-    if (leftPressed && rightPressed)
+    if (buttonPressed == Button.Select)
     {
       buttonCounter++;
 
       // reset button state to prevent movement in the following code
-      leftPressed = false;
-      rightPressed = false;
+      buttonPressed = Button.None;
+      lcd.setCursor(0, 1);
+      lcd.print("Hold for Auto...");
     }
     else
     {
@@ -93,38 +121,50 @@ void loop()
   }
 
   // movement
-  if (autoMode)
+  if (autoMode && !skipMovement)
   {
     tracker.autoAdjust();
   }
-  else
+  else if (!skipMovement)
   {
     // East/West
-    if (leftPressed)
+    if (buttonPressed == Button.Left)
     {
       tracker.manualAdjust(SolarTracker::Axis::Azimuth, SolarTracker::Direction::Positive);
+      lcd.setCursor(0, 1);
+      lcd.print("Azi Pos");
     }
-    else if (rightPressed)
+    else if (buttonPressed == Button.Right)
     {
       tracker.manualAdjust(SolarTracker::Axis::Azimuth, SolarTracker::Direction::Negative);
+      lcd.setCursor(0, 1);
+      lcd.print("Azi Neg");
     }
     else
     {
       tracker.manualAdjust(SolarTracker::Axis::Azimuth, SolarTracker::Direction::Stop);
+      lcd.setCursor(0, 1);
+      lcd.print("Azi Off");
     }
 
     // Up/Down
-    if (upPressed)
+    if (buttonPressed == Button.Up)
     {
       tracker.manualAdjust(SolarTracker::Axis::Elevation, SolarTracker::Direction::Positive);
+      lcd.setCursor(9, 1);
+      lcd.print("Ele Pos");
     }
-    else if (downPressed)
+    else if (buttonPressed == Button.Down)
     {
       tracker.manualAdjust(SolarTracker::Axis::Elevation, SolarTracker::Direction::Negative);
+      lcd.setCursor(9, 1);
+      lcd.print("Ele Neg");
     }
     else
     {
       tracker.manualAdjust(SolarTracker::Axis::Elevation, SolarTracker::Direction::Stop);
+      lcd.setCursor(9, 1);
+      lcd.print("Ele Off");
     }
   }
 
