@@ -13,6 +13,10 @@ public:
     L298N_Driver(uint8_t ch1EnablePin, uint8_t ch1PositivePin, uint8_t ch1NegativePin, uint8_t ch2EnablePin, uint8_t ch2PositivePin, uint8_t ch2NegativePin)
         : m_ch1En(ch1EnablePin), m_ch1Pos(ch1PositivePin), m_ch1Neg(ch1NegativePin), m_ch2En(ch2EnablePin), m_ch2Pos(ch2PositivePin), m_ch2Neg(ch2NegativePin)
     {
+    }
+
+    void init()
+    {
         // set direction registers
         pinMode(m_ch1En, OUTPUT);
         pinMode(m_ch1Pos, OUTPUT);
@@ -78,7 +82,6 @@ public:
     bool exec(Channel channel, Command cmd, uint8_t dutyCycle = 0)
     {
         // test if the requested action is allowed
-
         bool allowed = sense(channel, cmd);
 
 #ifdef SENSE_INVERT

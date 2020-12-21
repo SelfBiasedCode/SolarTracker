@@ -50,6 +50,9 @@ void setup()
   buttonCounter = 0;
   autoMode = true;
 
+  // initialize tracker
+  tracker.init();
+
   // initialize lcd
   lcd.begin(16, 2);
 }

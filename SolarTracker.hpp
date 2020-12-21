@@ -14,6 +14,11 @@ public:
         m_lastPwmValue_ele = 0;
     }
 
+    void init()
+    {
+        m_driver->init();
+    }
+
     enum class Direction : uint8_t { Positive, Negative, Stop };
     enum class Axis : uint8_t { Azimuth, Elevation };
 
