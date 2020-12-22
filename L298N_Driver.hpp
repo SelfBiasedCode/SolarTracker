@@ -4,6 +4,8 @@
 #include "Arduino.h"
 
 #define SENSE_INVERT
+// #define L298N_DRIVER_DEBUG
+#define READ_DELAY_MS 1
 
 class L298N_Driver
 {
@@ -17,6 +19,9 @@ public:
 
     void init()
     {
+#ifdef L298N_DRIVER_DEBUG
+        Serial.println("[L298N] init()");
+#endif
         // set direction registers
         pinMode(m_ch1En, OUTPUT);
         pinMode(m_ch1Pos, OUTPUT);
@@ -59,14 +64,14 @@ public:
         {
         case Command::Positive:
             pinMode(positivePin, INPUT);
-            delay(30);
+            delay(READ_DELAY_MS);
             result = digitalRead(positivePin);
             pinMode(positivePin, OUTPUT);
             break;
 
         case Command::Negative:
             pinMode(negativePin, INPUT);
-            delay(30);
+            delay(READ_DELAY_MS);
             result = digitalRead(negativePin);
             pinMode(negativePin, OUTPUT);
             break;
@@ -75,6 +80,15 @@ public:
             result = false;
             break;
         }
+
+#ifdef L298N_DRIVER_DEBUG
+        Serial.print("[L298N] sense(): Ch ");
+        Serial.print((uint8_t) channel);
+        Serial.print(" , Cmd ");
+        Serial.print((uint8_t) cmd);
+        Serial.print(", result ");
+        Serial.println(result);
+#endif
 
         return result;
     }
@@ -138,6 +152,15 @@ public:
             break;
         }
 
+#ifdef L298N_DRIVER_DEBUG
+        Serial.print("[L298N] exec(): Ch ");
+        Serial.print((uint8_t) channel);
+        Serial.print(" , Cmd ");
+        Serial.print((uint8_t) cmd);
+        Serial.print(", dc ");
+        Serial.println(dutyCycle);
+#endif
+
         // return positive indication
         return true;
     }
@@ -151,4 +174,4 @@ private:
     uint8_t m_ch2Neg;
 };
 
-#endif 
+#endif

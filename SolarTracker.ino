@@ -25,7 +25,8 @@ LiquidCrystal lcd(8, 9, 4, 5, 6, 7);
 
 
 // SolarTracker
-static const SolarTrackerConfig trackerConfig =
+using namespace SolarTracker;
+static const SolarConfig trackerConfig =
 {
 ldr_topLeftPin: LDR_TOPLEFT_PIN,
 ldr_topRightPin: LDR_TOPRIGHT_PIN,
@@ -38,7 +39,7 @@ motor_elevation_signalPin: MOTOR_ELEVATION_SIG_PIN,
 motor_elevation_positivePin: MOTOR_ELEVATION_POS,
 motor_elevation_negativePin: MOTOR_ELEVATION_NEG,
 };
-SolarTracker tracker(trackerConfig);
+Tracker tracker(trackerConfig);
 
 // UI
 uint8_t buttonCounter;
@@ -48,7 +49,7 @@ bool autoMode;
 void setup()
 {
   buttonCounter = 0;
-  autoMode = true;
+  autoMode = false;
 
   // initialize tracker
   tracker.init();
@@ -80,8 +81,8 @@ void loop()
   bool skipMovement = false;
   DisplayLine1 line1 = DisplayLine1::Auto;
   DisplayLine2Full line2 = DisplayLine2Full::None;
-  SolarTracker::Direction aziDirection = SolarTracker::Direction::Stop;
-  SolarTracker::Direction eleDirection = SolarTracker::Direction::Stop;
+  Tracker::Direction aziDirection = Tracker::Direction::Stop;
+  Tracker::Direction eleDirection = Tracker::Direction::Stop;
 
   // get button states
   Button buttonPressed = readButtonInputs();
@@ -131,13 +132,13 @@ void loop()
     switch (buttonPressed)
     {
       case Button::Left:
-        aziDirection = SolarTracker::Direction::Positive;
+        aziDirection = Tracker::Direction::Positive;
         break;
       case Button::Right:
-        aziDirection = SolarTracker::Direction::Negative;
+        aziDirection = Tracker::Direction::Negative;
         break;
       default:
-        aziDirection = SolarTracker::Direction::Stop;
+        aziDirection = Tracker::Direction::Stop;
         break;
     }
 
@@ -145,19 +146,19 @@ void loop()
     switch (buttonPressed)
     {
       case Button::Up:
-        eleDirection = SolarTracker::Direction::Positive;
+        eleDirection = Tracker::Direction::Positive;
         break;
       case Button::Down:
-        eleDirection = SolarTracker::Direction::Negative;
+        eleDirection = Tracker::Direction::Negative;
         break;
       default:
-        eleDirection = SolarTracker::Direction::Stop;
+        eleDirection = Tracker::Direction::Stop;
         break;
     }
 
     // execute manual movement
-    tracker.manualAdjust(SolarTracker::Axis::Azimuth, aziDirection);
-    tracker.manualAdjust(SolarTracker::Axis::Elevation, eleDirection);
+    tracker.manualAdjust(Tracker::Axis::Azimuth, aziDirection);
+    tracker.manualAdjust(Tracker::Axis::Elevation, eleDirection);
   }
 
   // display output
@@ -194,7 +195,7 @@ void loop()
 }
 
 
-void printLine2(SolarTracker::Direction aziDir, SolarTracker::Direction eleDir)
+void printLine2(Tracker::Direction aziDir, Tracker::Direction eleDir)
 {
   lcd.setCursor(0, 1);
   lcd.print("Azi "); // 4
@@ -207,18 +208,44 @@ void printLine2(SolarTracker::Direction aziDir, SolarTracker::Direction eleDir)
   printDirectionToString(eleDir); // 3
 }
 
-void printDirectionToString(SolarTracker::Direction dir)
+void printDirectionToString(Tracker::Direction dir)
 {
   switch (dir)
   {
-    case SolarTracker::Direction::Positive:
+    case Tracker::Direction::Positive:
       lcd.print("Pos ");
       break;
-    case SolarTracker::Direction::Negative:
+    case Tracker::Direction::Negative:
       lcd.print("Neg ");
       break;
-    case SolarTracker::Direction::Stop:
+    case Tracker::Direction::Stop:
       lcd.print("Off ");
       break;
   }
+}
+
+void printTestMode()
+{
+  // get data
+  SolarTracker::InputInfo info = tracker.getInputInfo();
+
+  // print limit switch data
+  lcd.setCursor(1, 0);
+  lcd.print(info.limitSwElePos);
+  lcd.setCursor(1, 1);
+  lcd.print(info.limitSwEleNeg);
+  lcd.setCursor(0, 1);
+  lcd.print(info.limitSwAziNeg);
+  lcd.setCursor(2, 1);
+  lcd.print(info.limitSwAziPos);
+
+  // print LDR values
+  lcd.setCursor(7, 0);
+  lcd.print(info.ldrValTopLeft);
+  lcd.setCursor(12, 0);
+  lcd.print(info.ldrValTopRight);
+  lcd.setCursor(7, 1);
+  lcd.print(info.ldrValBotLeft);
+  lcd.setCursor(12, 1);
+  lcd.print(info.ldrValBotRight);
 }
