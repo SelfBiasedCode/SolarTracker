@@ -4,13 +4,15 @@
 enum class DisplayLine1: uint8_t
 {
     Auto,
-    Manual
+    Manual,
+    Empty
 };
 
 enum class DisplayLine2Full : uint8_t
 {
     None,
-    HoldForAuto
+    HoldForAuto,
+    Empty
 };
 
 #endif

@@ -23,7 +23,6 @@
 #define SWITCHES_PIN A0
 LiquidCrystal lcd(8, 9, 4, 5, 6, 7);
 
-
 // SolarTracker
 using namespace SolarTracker;
 static const SolarConfig trackerConfig =
@@ -45,6 +44,7 @@ Tracker tracker(trackerConfig);
 uint8_t buttonCounter;
 bool autoMode;
 #define MODE_SWITCH_INVOCATION_COUNT 10
+#define TEST_MODE // comment this out to enable auto mode
 
 void setup()
 {
@@ -118,13 +118,25 @@ void loop()
     if (buttonCounter > MODE_SWITCH_INVOCATION_COUNT)
     {
       autoMode = true;
+      skipMovement = false; // TODO: Optimize the use of this variable
+      #ifdef TEST_MODE
+      lcd.clear();
+      #endif
     }
   }
 
   // movement
   if (autoMode && !skipMovement)
   {
+#ifdef TEST_MODE
+    printTestMode();
+    line1 = DisplayLine1::Empty;
+    line2 = DisplayLine2Full::Empty;
+    delay(400);
+#else
     tracker.autoAdjust();
+#endif
+
   }
   else if (!skipMovement)
   {
@@ -174,6 +186,10 @@ void loop()
     case DisplayLine1::Manual:
       lcd.print("Mode: Manual    ");
       break;
+
+    // empty case: do nothing
+    case DisplayLine1::Empty:
+      break;
   }
 
   switch (line2)
@@ -182,6 +198,10 @@ void loop()
     case DisplayLine2Full::HoldForAuto:
       lcd.setCursor(0, 1);
       lcd.print("Hold for Auto...");
+      break;
+
+    // empty case: do nothing
+    case DisplayLine2Full::Empty:
       break;
 
     // standard case: Split line
@@ -241,11 +261,15 @@ void printTestMode()
 
   // print LDR values
   lcd.setCursor(7, 0);
+  if (info.ldrValTopLeft < 1000) lcd.print(" ");
   lcd.print(info.ldrValTopLeft);
   lcd.setCursor(12, 0);
+  if (info.ldrValTopRight < 1000) lcd.print(" ");
   lcd.print(info.ldrValTopRight);
   lcd.setCursor(7, 1);
+  if (info.ldrValBotLeft < 1000) lcd.print(" ");
   lcd.print(info.ldrValBotLeft);
   lcd.setCursor(12, 1);
+  if (info.ldrValBotRight < 1000) lcd.print(" ");
   lcd.print(info.ldrValBotRight);
 }
