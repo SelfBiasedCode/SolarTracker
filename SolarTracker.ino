@@ -10,14 +10,14 @@
 #define LDR_BOTRIGHT_PIN A4
 
 // digital outputs
-#define MOTOR_AZIMUTH_POS 14
-#define MOTOR_AZIMUTH_NEG 15
-#define MOTOR_ELEVATION_POS A6
-#define MOTOR_ELEVATION_NEG A7
+#define MOTOR_AZIMUTH_POS 14 // red
+#define MOTOR_AZIMUTH_NEG 15 // black
+#define MOTOR_ELEVATION_POS A8 // white
+#define MOTOR_ELEVATION_NEG A9 // orange
 
 // PWM outputs
-#define MOTOR_AZIMUTH_SIG_PIN 2
-#define MOTOR_ELEVATION_SIG_PIN 3
+#define MOTOR_AZIMUTH_SIG_PIN 2 // orange
+#define MOTOR_ELEVATION_SIG_PIN 3 // blue
 
 // LCD Shield
 #define SWITCHES_PIN A0
@@ -91,7 +91,7 @@ void loop()
   if (autoMode)
   {
     // if auto mode is active, switch to manual if a button was pressed
-    autoMode = buttonPressed == Button::None;
+    autoMode = !(buttonPressed == Button::Left || buttonPressed == Button::Right || buttonPressed == Button::Up || buttonPressed == Button::Down);
 
     buttonCounter = 0;
     line1 = DisplayLine1::Auto;
