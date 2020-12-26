@@ -5,8 +5,9 @@
 
 namespace SolarTracker
 {
-    struct InputInfo
+    class InputInfo
     {
+    public:
         uint16_t ldrValTopLeft;
         uint16_t ldrValTopRight;
         uint16_t ldrValBotLeft;

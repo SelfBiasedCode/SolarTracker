@@ -4,6 +4,7 @@
 #include "SolarConfig.hpp"
 #include "InputInfo.hpp"
 #include "L298N_Driver.hpp"
+#include "AxisData.hpp"
 
 // #define SOLAR_TRACKER_DEBUG
 
@@ -12,11 +13,10 @@ namespace SolarTracker
     class Tracker
     {
     public:
-        Tracker(SolarConfig config) :m_config(config)
+        Tracker(SolarConfig config) :m_config(config), m_aziAxis(config.motor_azimuth_minPwm, L298N_Driver::Channel::Ch1), m_eleAxis(config.motor_elevation_minPwm, L298N_Driver::Channel::Ch2)
         {
+            // instantiate driver
             m_driver = new L298N_Driver(m_config.motor_azimuth_signalPin, m_config.motor_azimuth_positivePin, m_config.motor_azimuth_negativePin, m_config.motor_elevation_signalPin, m_config.motor_elevation_positivePin, m_config.motor_elevation_negativePin);
-            m_lastPwmValue_azi = 0;
-            m_lastPwmValue_ele = 0;
         }
 
         void init()
@@ -35,39 +35,38 @@ namespace SolarTracker
         void manualAdjust(Axis axis, Direction direction);
         InputInfo getInputInfo();
 
-
     private:
         // methods
         void readLdrs();
         int16_t calcAzimuthError() const;
         int16_t calcElevationError() const;
-        uint8_t calcPwmValue(uint16_t& error) const;
-        void executeCorrection(int16_t* error, uint8_t* lastPwmValue, L298N_Driver::Channel channel);
-        void smoothPwm(uint8_t* lastPwmValue, uint8_t& pwmTarget);
-
+        uint8_t calcPwmValue(uint16_t& error);
+        void smoothPwm(AxisData& axis, uint8_t& pwmTarget);
+        void execSmooth(AxisData& axis, L298N_Driver::Command direction, uint8_t speed);
+        void executeCorrection(AxisData& axis, int16_t& error);
+        
         // most recent data
-        uint8_t m_topLeftVal;
-        uint8_t m_topRightVal;
-        uint8_t m_bottomLeftVal;
-        uint8_t m_bottomRightVal;
-        uint8_t m_lastPwmValue_azi;
-        uint8_t m_lastPwmValue_ele;
+        uint16_t m_topLeftVal;
+        uint16_t m_topRightVal;
+        uint16_t m_bottomLeftVal;
+        uint16_t m_bottomRightVal;
 
         // config
         SolarConfig m_config;
+        AxisData m_aziAxis;
+        AxisData m_eleAxis;
 
         // driver
         L298N_Driver* m_driver;
 
-        // constants
+        // controller constants
         static const uint8_t m_tolerance = 10;
         static const uint16_t m_shadowLevel = 100;
-        static const uint8_t m_speedManual = 100;
-        static const uint8_t m_Kp_shift = 1;
-        static const uint8_t m_maxPwmStep = 25;
+        static const uint8_t m_Kp_shift = 0;
 
-        static const L298N_Driver::Channel m_azimuthChannel = L298N_Driver::Channel::Ch1;
-        static const L298N_Driver::Channel m_elevationChannel = L298N_Driver::Channel::Ch2;
+        // PWM constants
+        static const uint8_t m_speedManual = 100;
+        static const uint8_t m_maxPwmStep = 25;
     };
 }
 #endif

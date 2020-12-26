@@ -5,12 +5,11 @@
 
 #define SENSE_INVERT
 // #define L298N_DRIVER_DEBUG
-#define READ_DELAY_MS 1
 
 class L298N_Driver
 {
 public:
-    enum class Channel : uint8_t { Ch1, Ch2 };
+    enum class Channel : uint8_t { Ch1 = 1, Ch2 = 2};
     enum class Command : uint8_t { Positive, Negative, Brake, Off };
     L298N_Driver(uint8_t ch1EnablePin, uint8_t ch1PositivePin, uint8_t ch1NegativePin, uint8_t ch2EnablePin, uint8_t ch2PositivePin, uint8_t ch2NegativePin)
         : m_ch1En(ch1EnablePin), m_ch1Pos(ch1PositivePin), m_ch1Neg(ch1NegativePin), m_ch2En(ch2EnablePin), m_ch2Pos(ch2PositivePin), m_ch2Neg(ch2NegativePin)
@@ -29,7 +28,6 @@ public:
         pinMode(m_ch2En, OUTPUT);
         pinMode(m_ch2Pos, OUTPUT);
         pinMode(m_ch2Neg, OUTPUT);
-
 
         // set initial state
         analogWrite(m_ch1En, 0);
@@ -57,6 +55,8 @@ public:
             positivePin = m_ch2Pos;
             negativePin = m_ch2Neg;
             break;
+        default:
+            return false;
         }
 
         // test
@@ -64,14 +64,12 @@ public:
         {
         case Command::Positive:
             pinMode(positivePin, INPUT);
-            delay(READ_DELAY_MS);
             result = digitalRead(positivePin);
             pinMode(positivePin, OUTPUT);
             break;
 
         case Command::Negative:
             pinMode(negativePin, INPUT);
-            delay(READ_DELAY_MS);
             result = digitalRead(negativePin);
             pinMode(negativePin, OUTPUT);
             break;
@@ -122,6 +120,8 @@ public:
             positivePin = m_ch2Pos;
             negativePin = m_ch2Neg;
             break;
+        default:
+            return false;
         }
 
         // select command
@@ -150,6 +150,8 @@ public:
             digitalWrite(positivePin, LOW);
             digitalWrite(negativePin, LOW);
             break;
+        default:
+            return false;
         }
 
 #ifdef L298N_DRIVER_DEBUG

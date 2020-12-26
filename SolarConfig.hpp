@@ -5,6 +5,7 @@
 
 namespace SolarTracker
 {
+    // struct to allow for const initialization
     struct SolarConfig
     {
         uint8_t ldr_topLeftPin;
@@ -15,10 +16,12 @@ namespace SolarTracker
         uint8_t motor_azimuth_signalPin;
         uint8_t motor_azimuth_positivePin;
         uint8_t motor_azimuth_negativePin;
+        uint8_t motor_azimuth_minPwm;
 
         uint8_t motor_elevation_signalPin;
         uint8_t motor_elevation_positivePin;
         uint8_t motor_elevation_negativePin;
+        uint8_t motor_elevation_minPwm;
     };
 }
 

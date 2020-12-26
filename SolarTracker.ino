@@ -34,9 +34,11 @@ ldr_bottomRightPin: LDR_BOTRIGHT_PIN,
 motor_azimuth_signalPin: MOTOR_AZIMUTH_SIG_PIN,
 motor_azimuth_positivePin: MOTOR_AZIMUTH_POS,
 motor_azimuth_negativePin: MOTOR_AZIMUTH_NEG,
+motor_azimuth_minPwm: 40,
 motor_elevation_signalPin: MOTOR_ELEVATION_SIG_PIN,
 motor_elevation_positivePin: MOTOR_ELEVATION_POS,
 motor_elevation_negativePin: MOTOR_ELEVATION_NEG,
+motor_elevation_minPwm: 40,
 };
 Tracker tracker(trackerConfig);
 
@@ -45,6 +47,7 @@ uint8_t buttonCounter;
 bool autoMode;
 #define MODE_SWITCH_INVOCATION_COUNT 10
 #define TEST_MODE // comment this out to enable auto mode
+#define DEBUG
 
 void setup()
 {
@@ -56,6 +59,10 @@ void setup()
 
   // initialize lcd
   lcd.begin(16, 2);
+  
+  #ifdef DEBUG
+  Serial.begin(9600);
+  #endif
 }
 
 Button readButtonInputs()
@@ -134,7 +141,7 @@ void loop()
     line2 = DisplayLine2Full::Empty;
     delay(400);
 #else
-    tracker.autoAdjust();
+    tracker.autoAdjust(); // TODO: Add feedback
 #endif
 
   }

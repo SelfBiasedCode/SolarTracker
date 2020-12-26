@@ -18,41 +18,74 @@ namespace SolarTracker
 
     int16_t Tracker::calcElevationError() const
     {
-        return (m_topLeftVal + m_topRightVal) - (m_topRightVal + m_bottomLeftVal);
+        return (m_topLeftVal + m_topRightVal) - (m_bottomLeftVal + m_bottomRightVal);
     }
 
-    void Tracker::smoothPwm(uint8_t* lastPwmValue, uint8_t& pwmTarget)
+    // calculates a smooth PWM transition
+    // modifies axis and pwmTarget in-place
+    void Tracker::smoothPwm(AxisData& axis, uint8_t& pwmTarget)
     {
         uint8_t maxChange;
-        if (pwmTarget > *lastPwmValue)
+        if (pwmTarget > axis.lastPwmValue)
         {
-            maxChange = (*lastPwmValue + m_maxPwmStep);
-            if (maxChange > pwmTarget)
+            maxChange = (axis.lastPwmValue + m_maxPwmStep);
+            if (maxChange < pwmTarget)
             {
                 pwmTarget = maxChange;
             }
         }
         else
         {
-            maxChange = (*lastPwmValue - m_maxPwmStep);
-            if (maxChange < pwmTarget)
+            maxChange = (axis.lastPwmValue - m_maxPwmStep);
+            if (maxChange > pwmTarget)
             {
                 pwmTarget = maxChange;
             }
         }
 
-        *lastPwmValue = pwmTarget;
+        if (pwmTarget < axis.minPwmValue && pwmTarget > 0)
+        {
+            pwmTarget = axis.minPwmValue;
+        }
+
+        axis.lastPwmValue = pwmTarget;
     }
 
-    void Tracker::executeCorrection(int16_t* error, uint8_t* lastPwmValue, L298N_Driver::Channel channel)
+    // smoothes motion in any direction
+    void Tracker::execSmooth(AxisData& axis, L298N_Driver::Command targetCommand, uint8_t targetSpeed)
+    {
+        // slow to zero if direction is different and last command was not Off
+        if (targetCommand != axis.lastCommand && axis.lastCommand != L298N_Driver::Command::Off)
+        {
+            // if min PWM was reached last time, assume it's safe to turn around
+            if (axis.lastPwmValue == axis.minPwmValue)
+            {
+                axis.lastCommand = L298N_Driver::Command::Off;
+                axis.lastPwmValue = 0;
+                m_driver->exec(axis.channel, axis.lastCommand, axis.lastPwmValue);
+            }
+            else
+            {
+                // min PWM not yet reached -> deccelerate
+                targetSpeed = 0;
+            }
+        }
+
+        // smooth & execute
+        smoothPwm(axis, targetSpeed);
+        m_driver->exec(axis.channel, axis.lastCommand, axis.lastPwmValue);
+    }
+
+    // this method modifies error in-place
+    void Tracker::executeCorrection(AxisData& axis, int16_t& error)
     {
         L298N_Driver::Command direction;
         uint8_t pwmTarget;
-        bool isNegative = (*error < 0);
+        bool isNegative = (error < 0);
 
         if (isNegative)
         {
-            *error *= -1;
+            error *= -1;
             direction = L298N_Driver::Command::Negative;
         }
         else
@@ -60,36 +93,35 @@ namespace SolarTracker
             direction = L298N_Driver::Command::Positive;
         }
 
-        if (*error > m_tolerance)
+        if (error > m_tolerance)
         {
-            pwmTarget = calcPwmValue((uint16_t&)*error);
+            pwmTarget = calcPwmValue((uint16_t&)error);
         }
         else
         {
             pwmTarget = 0;
             direction = L298N_Driver::Command::Off;
         }
+
 #ifdef SOLAR_TRACKER_DEBUG
-        Serial.print("[SolarTracker] executeCorrection(): isNegative ");
+        Serial.print("[SolarTracker] executeCorrection(): axis Ch");
+        Serial.print((uint8_t)axis.channel);
+        Serial.print(", isNegative ");
         Serial.print(isNegative);
         Serial.print(", pwmTarget ");
         Serial.print(pwmTarget);
         Serial.print(", dir ");
         Serial.print((uint8_t)direction);
         Serial.print(", oldPwmVal ");
-        Serial.print(*lastPwmValue);
+        Serial.println(axis.lastPwmValue);
 #endif 
-
-        // modify last value in-place
-        smoothPwm(lastPwmValue, pwmTarget);
+        // execute
+        execSmooth(axis, direction, pwmTarget);
 
 #ifdef SOLAR_TRACKER_DEBUG
-        Serial.print(", newPwmVal ");
-        Serial.println(*lastPwmValue);
+        Serial.print("[SolarTracker] executeCorrection(): newPwmVal ");
+        Serial.println(axis.lastPwmValue);
 #endif
-
-        // execute
-        m_driver->exec(channel, direction, *lastPwmValue);
     }
 
     void Tracker::autoAdjust()
@@ -97,8 +129,6 @@ namespace SolarTracker
         // get measurement data
         readLdrs();
 
-        // check plausibility
-        // TODO
         // calculate sum for shadow check
         uint16_t sum = m_topLeftVal + m_topRightVal + m_bottomLeftVal + m_bottomRightVal;
 
@@ -115,9 +145,11 @@ namespace SolarTracker
         Serial.println(sum);
 #endif 
 
-        // if there is not enough light, skip movement
+        // if there is not enough light, stop movement
         if (sum < m_shadowLevel)
         {
+            execSmooth(m_aziAxis, L298N_Driver::Command::Off, 0);
+            execSmooth(m_eleAxis, L298N_Driver::Command::Off, 0);
             return;
         }
 
@@ -126,18 +158,18 @@ namespace SolarTracker
         int16_t elevationError = calcElevationError();
 
         // Azimuth correction
-        executeCorrection(&azimuthError, &m_lastPwmValue_azi, m_azimuthChannel);
+        executeCorrection(m_aziAxis, azimuthError);
 
         // Elevation correction
-        executeCorrection(&elevationError, &m_lastPwmValue_ele, m_elevationChannel);
+        executeCorrection(m_eleAxis, elevationError);
     }
 
-    uint8_t Tracker::calcPwmValue(uint16_t& error) const
+    uint8_t Tracker::calcPwmValue(uint16_t& error)
     {
         // apply P-factor
-        uint16_t value = error >> m_Kp_shift;
+        uint16_t value = error << m_Kp_shift;
 
-        // saturate
+        // upper limit
         if (value > 255)
         {
             value = 255;
@@ -149,45 +181,33 @@ namespace SolarTracker
 
     void Tracker::manualAdjust(Axis axis, Direction direction)
     {
-        L298N_Driver::Channel channel;
-        uint8_t* lastPwmValue;
+        AxisData* axisData;
         switch (axis)
         {
         case Axis::Azimuth:
-            channel = m_azimuthChannel;
-            lastPwmValue = &m_lastPwmValue_azi;
+            axisData = &m_aziAxis;
             break;
         case Axis::Elevation:
-            channel = m_elevationChannel;
-            lastPwmValue = &m_lastPwmValue_ele;
+            axisData = &m_eleAxis;
             break;
         default:
             return;
         }
-
-        // do not allow manual movement before stopping automatic movement
-        /*
-        if (*lastPwmValue > 0)
-        {
-            executeCorrection(0, lastPwmValue, channel);
-            return;
-        }
-        */
 
         // execute movement
         switch (direction)
         {
         case Direction::Positive:
-            m_driver->exec(channel, L298N_Driver::Command::Positive, m_speedManual);
+            execSmooth(*axisData, L298N_Driver::Command::Positive, m_speedManual);
             break;
 
         case Direction::Negative:
-            m_driver->exec(channel, L298N_Driver::Command::Negative, m_speedManual);
+            execSmooth(*axisData, L298N_Driver::Command::Negative, m_speedManual);
             break;
 
         case Direction::Stop:
         default:
-            m_driver->exec(channel, L298N_Driver::Command::Off);
+            execSmooth(*axisData, L298N_Driver::Command::Off, 0);
             break;
         }
     }
@@ -204,10 +224,10 @@ namespace SolarTracker
         result.ldrValBotRight = m_bottomRightVal;
 
         // get limit switch data
-        result.limitSwAziPos = m_driver->sense(m_azimuthChannel, L298N_Driver::Command::Positive);
-        result.limitSwAziNeg = m_driver->sense(m_azimuthChannel, L298N_Driver::Command::Negative);
-        result.limitSwElePos = m_driver->sense(m_elevationChannel, L298N_Driver::Command::Positive);
-        result.limitSwEleNeg = m_driver->sense(m_elevationChannel, L298N_Driver::Command::Negative);
+        result.limitSwAziPos = m_driver->sense(m_aziAxis.channel, L298N_Driver::Command::Positive);
+        result.limitSwAziNeg = m_driver->sense(m_aziAxis.channel, L298N_Driver::Command::Negative);
+        result.limitSwElePos = m_driver->sense(m_eleAxis.channel, L298N_Driver::Command::Positive);
+        result.limitSwEleNeg = m_driver->sense(m_eleAxis.channel, L298N_Driver::Command::Negative);
 
         return result;
     }
