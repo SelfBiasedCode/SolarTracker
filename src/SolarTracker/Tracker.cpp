@@ -1,4 +1,4 @@
-#include "SolarTracker.hpp"
+#include "Tracker.hpp"
 #include "L298N_Driver.hpp"
 
 namespace SolarTracker

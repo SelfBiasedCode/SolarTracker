@@ -25,7 +25,7 @@ LiquidCrystal lcd(8, 9, 4, 5, 6, 7);
 
 // SolarTracker
 using namespace SolarTracker;
-static const SolarConfig trackerConfig =
+static const Config trackerConfig =
 {
 ldr_topLeftPin: LDR_TOPLEFT_PIN,
 ldr_topRightPin: LDR_TOPRIGHT_PIN,
@@ -88,8 +88,8 @@ void loop()
   bool skipMovement = false;
   DisplayLine1 line1 = DisplayLine1::Auto;
   DisplayLine2Full line2 = DisplayLine2Full::None;
-  Tracker::Direction aziDirection = Tracker::Direction::Stop;
-  Tracker::Direction eleDirection = Tracker::Direction::Stop;
+  SolarTracker::Direction aziDirection = SolarTracker::Direction::Stop;
+  SolarTracker::Direction eleDirection = SolarTracker::Direction::Stop;
 
   // get button states
   Button buttonPressed = readButtonInputs();
@@ -151,13 +151,13 @@ void loop()
     switch (buttonPressed)
     {
       case Button::Left:
-        aziDirection = Tracker::Direction::Positive;
+        aziDirection = SolarTracker::Direction::Positive;
         break;
       case Button::Right:
-        aziDirection = Tracker::Direction::Negative;
+        aziDirection = SolarTracker::Direction::Negative;
         break;
       default:
-        aziDirection = Tracker::Direction::Stop;
+        aziDirection = SolarTracker::Direction::Stop;
         break;
     }
 
@@ -165,13 +165,13 @@ void loop()
     switch (buttonPressed)
     {
       case Button::Up:
-        eleDirection = Tracker::Direction::Positive;
+        eleDirection = SolarTracker::Direction::Positive;
         break;
       case Button::Down:
-        eleDirection = Tracker::Direction::Negative;
+        eleDirection = SolarTracker::Direction::Negative;
         break;
       default:
-        eleDirection = Tracker::Direction::Stop;
+        eleDirection = SolarTracker::Direction::Stop;
         break;
     }
 
@@ -222,7 +222,7 @@ void loop()
 }
 
 
-void printLine2(Tracker::Direction aziDir, Tracker::Direction eleDir)
+void printLine2(SolarTracker::Direction aziDir, SolarTracker::Direction eleDir)
 {
   lcd.setCursor(0, 1);
   lcd.print("Azi "); // 4
@@ -235,17 +235,17 @@ void printLine2(Tracker::Direction aziDir, Tracker::Direction eleDir)
   printDirectionToString(eleDir); // 3
 }
 
-void printDirectionToString(Tracker::Direction dir)
+void printDirectionToString(SolarTracker::Direction dir)
 {
   switch (dir)
   {
-    case Tracker::Direction::Positive:
+    case SolarTracker::Direction::Positive:
       lcd.print("Pos ");
       break;
-    case Tracker::Direction::Negative:
+    case SolarTracker::Direction::Negative:
       lcd.print("Neg ");
       break;
-    case Tracker::Direction::Stop:
+    case SolarTracker::Direction::Stop:
       lcd.print("Off ");
       break;
   }

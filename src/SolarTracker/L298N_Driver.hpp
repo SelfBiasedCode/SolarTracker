@@ -4,12 +4,11 @@
 #include "Arduino.h"
 
 #define SENSE_INVERT
-// #define L298N_DRIVER_DEBUG
 
 class L298N_Driver
 {
 public:
-    enum class Channel : uint8_t { Ch1 = 1, Ch2 = 2};
+    enum class Channel : uint8_t { Ch1 = 1, Ch2 = 2 };
     enum class Command : uint8_t { Positive, Negative, Brake, Off };
     L298N_Driver(uint8_t ch1EnablePin, uint8_t ch1PositivePin, uint8_t ch1NegativePin, uint8_t ch2EnablePin, uint8_t ch2PositivePin, uint8_t ch2NegativePin)
         : m_ch1En(ch1EnablePin), m_ch1Pos(ch1PositivePin), m_ch1Neg(ch1NegativePin), m_ch2En(ch2EnablePin), m_ch2Pos(ch2PositivePin), m_ch2Neg(ch2NegativePin)
@@ -81,9 +80,9 @@ public:
 
 #ifdef L298N_DRIVER_DEBUG
         Serial.print("[L298N] sense(): Ch ");
-        Serial.print((uint8_t) channel);
+        Serial.print((uint8_t)channel);
         Serial.print(" , Cmd ");
-        Serial.print((uint8_t) cmd);
+        Serial.print((uint8_t)cmd);
         Serial.print(", result ");
         Serial.println(result);
 #endif
@@ -156,9 +155,9 @@ public:
 
 #ifdef L298N_DRIVER_DEBUG
         Serial.print("[L298N] exec(): Ch ");
-        Serial.print((uint8_t) channel);
+        Serial.print((uint8_t)channel);
         Serial.print(" , Cmd ");
-        Serial.print((uint8_t) cmd);
+        Serial.print((uint8_t)cmd);
         Serial.print(", dc ");
         Serial.println(dutyCycle);
 #endif

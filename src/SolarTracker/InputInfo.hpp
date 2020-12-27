@@ -1,5 +1,5 @@
-#ifndef INPUT_INFO_HPP
-#define INPUT_INFO_HPP
+#ifndef INPUT_INFO_H
+#define INPUT_INFO_H
 
 #include <stdint.h>
 

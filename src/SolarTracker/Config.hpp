@@ -6,7 +6,7 @@
 namespace SolarTracker
 {
     // struct to allow for const initialization
-    struct SolarConfig
+    struct Config
     {
         uint8_t ldr_topLeftPin;
         uint8_t ldr_topRightPin;
