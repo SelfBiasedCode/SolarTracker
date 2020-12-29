@@ -9,7 +9,7 @@ namespace SolarTracker
     class OutputInfo
     {
     public:
-        OutputInfo(Direction aziDir, uint8_t aziSpeed, Direction eleDir, uint8_t eleSpeed) :
+        OutputInfo(const Direction aziDir, const uint8_t aziSpeed, const Direction eleDir, const uint8_t eleSpeed) :
             azimuthDirection(aziDir), azimuthSpeed(aziSpeed), elevationDirection(eleDir), elevationSpeed(eleSpeed) 
         {
         }

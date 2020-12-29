@@ -13,7 +13,7 @@ namespace SolarTracker
     class Tracker
     {
     public:
-        Tracker(Config config) :m_config(config), m_aziAxis(config.motor_azimuth_minPwm, L298N_Driver::Channel::Ch1), m_eleAxis(config.motor_elevation_minPwm, L298N_Driver::Channel::Ch2)
+        Tracker(const Config& config) :m_config(config), m_aziAxis(config.motor_azimuth_minPwm, L298N_Driver::Channel::Ch1), m_eleAxis(config.motor_elevation_minPwm, L298N_Driver::Channel::Ch2)
         {
             // instantiate driver
             m_driver = new L298N_Driver(m_config.motor_azimuth_signalPin, m_config.motor_azimuth_positivePin, m_config.motor_azimuth_negativePin, m_config.motor_elevation_signalPin, m_config.motor_elevation_positivePin, m_config.motor_elevation_negativePin);
@@ -61,7 +61,7 @@ namespace SolarTracker
         int16_t m_elevationError;
 
         // config
-        Config m_config;
+        const Config& m_config;
         AxisData m_aziAxis;
         AxisData m_eleAxis;
 

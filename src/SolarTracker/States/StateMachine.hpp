@@ -19,7 +19,7 @@ namespace SolarTracker::States
     class StateMachine
     {
     public:
-        StateMachine(SolarTracker::Tracker& tracker, LiquidCrystal& lcd, uint8_t buttonPin) :
+        StateMachine(SolarTracker::Tracker& tracker, LiquidCrystal& lcd, const uint8_t buttonPin) :
             m_testMode(tracker, lcd), m_manualMode(tracker, lcd), m_autoMode(tracker, lcd), m_transMode(tracker, lcd, BUTTON_HOLD_CYCLES), m_initMode(tracker, lcd),
             m_lcd(lcd), m_buttonPin(buttonPin), m_currentState(State::Init)
         {

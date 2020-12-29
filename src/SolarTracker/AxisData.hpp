@@ -9,7 +9,7 @@ namespace SolarTracker
     class AxisData
     {
     public:
-        AxisData(uint8_t minPwmVal, L298N_Driver::Channel channel, L298N_Driver::Command lastCmd = L298N_Driver::Command::Off) :
+        AxisData(const uint8_t minPwmVal, const L298N_Driver::Channel channel, L298N_Driver::Command lastCmd = L298N_Driver::Command::Off) :
             lastPwmValue(0), lastCommand(lastCmd), minPwmValue(minPwmVal), channel(channel)
         {
         }
