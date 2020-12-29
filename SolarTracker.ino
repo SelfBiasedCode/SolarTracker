@@ -1,7 +1,5 @@
 #include <LiquidCrystal.h>
 #include "SolarTracker.hpp"
-#include "Button.hpp"
-#include "DisplayText.hpp"
 
 // analog inputs
 #define LDR_TOPLEFT_PIN A1
@@ -20,7 +18,7 @@
 #define MOTOR_ELEVATION_SIG_PIN 3 // blue
 
 // LCD Shield
-#define SWITCHES_PIN A0
+#define BUTTONS_PIN A0
 LiquidCrystal lcd(8, 9, 4, 5, 6, 7);
 
 // SolarTracker
@@ -34,13 +32,14 @@ ldr_bottomRightPin: LDR_BOTRIGHT_PIN,
 motor_azimuth_signalPin: MOTOR_AZIMUTH_SIG_PIN,
 motor_azimuth_positivePin: MOTOR_AZIMUTH_POS,
 motor_azimuth_negativePin: MOTOR_AZIMUTH_NEG,
-motor_azimuth_minPwm: 40,
+  motor_azimuth_minPwm: 40,
 motor_elevation_signalPin: MOTOR_ELEVATION_SIG_PIN,
 motor_elevation_positivePin: MOTOR_ELEVATION_POS,
 motor_elevation_negativePin: MOTOR_ELEVATION_NEG,
-motor_elevation_minPwm: 40,
+  motor_elevation_minPwm: 40,
 };
 Tracker tracker(trackerConfig);
+States::StateMachine stateMachine(tracker, lcd, BUTTONS_PIN);
 
 // UI
 uint8_t buttonCounter;
@@ -54,229 +53,25 @@ void setup()
   buttonCounter = 0;
   autoMode = false;
 
-  // initialize tracker
+  // initialize Tracker
   tracker.init();
 
-  // initialize lcd
+  // initialize LCD
   lcd.begin(16, 2);
-  
-  #ifdef DEBUG
+
+  // initizalize State Machine
+  stateMachine.init();
+
+#ifdef DEBUG
   Serial.begin(9600);
-  #endif
-}
-
-Button readButtonInputs()
-{
-  // read value from ADC
-  uint16_t inputValue = analogRead(SWITCHES_PIN);
-
-  // return button based on value
-  if (inputValue > 1000) return Button::None;
-  if (inputValue < 50)   return Button::Right;
-  if (inputValue < 195)  return Button::Up;
-  if (inputValue < 380)  return Button::Down;
-  if (inputValue < 555)  return Button::Left;
-  if (inputValue < 790)  return Button::Select;
-
-  // fail
-  return Button::None;
+#endif
 }
 
 void loop()
 {
-  // UI variables
-  bool skipMovement = false;
-  DisplayLine1 line1 = DisplayLine1::Auto;
-  DisplayLine2Full line2 = DisplayLine2Full::None;
-  SolarTracker::Direction aziDirection = SolarTracker::Direction::Stop;
-  SolarTracker::Direction eleDirection = SolarTracker::Direction::Stop;
-
-  // get button states
-  Button buttonPressed = readButtonInputs();
-
-  // mode selection
-  if (autoMode)
-  {
-    // if auto mode is active, switch to manual if a button was pressed
-    autoMode = !(buttonPressed == Button::Left || buttonPressed == Button::Right || buttonPressed == Button::Up || buttonPressed == Button::Down);
-
-    buttonCounter = 0;
-    line1 = DisplayLine1::Auto;
-  }
-  else
-  {
-    line1 = DisplayLine1::Manual;
-
-    // auto mode inactive: switch back if left and right buttons are pressed for a certain number of invocations
-    if (buttonPressed == Button::Select)
-    {
-      buttonCounter++;
-
-      // prevent movement and inform user
-      skipMovement = true;
-      line2 = DisplayLine2Full::HoldForAuto;
-    }
-    else
-    {
-      buttonCounter = 0;
-    }
-
-    // if buttons were held long enough, switch to auto mode
-    if (buttonCounter > MODE_SWITCH_INVOCATION_COUNT)
-    {
-      autoMode = true;
-      skipMovement = false; // TODO: Optimize the use of this variable
-      #ifdef TEST_MODE
-      lcd.clear();
-      #endif
-    }
-  }
-
-  // movement
-  if (autoMode && !skipMovement)
-  {
-#ifdef TEST_MODE
-    printTestMode();
-    line1 = DisplayLine1::Empty;
-    line2 = DisplayLine2Full::Empty;
-    delay(400);
-#else
-    tracker.autoAdjust(); // TODO: Add feedback
-#endif
-
-  }
-  else if (!skipMovement)
-  {
-    // East/West
-    switch (buttonPressed)
-    {
-      case Button::Left:
-        aziDirection = SolarTracker::Direction::Positive;
-        break;
-      case Button::Right:
-        aziDirection = SolarTracker::Direction::Negative;
-        break;
-      default:
-        aziDirection = SolarTracker::Direction::Stop;
-        break;
-    }
-
-    // Up/Down
-    switch (buttonPressed)
-    {
-      case Button::Up:
-        eleDirection = SolarTracker::Direction::Positive;
-        break;
-      case Button::Down:
-        eleDirection = SolarTracker::Direction::Negative;
-        break;
-      default:
-        eleDirection = SolarTracker::Direction::Stop;
-        break;
-    }
-
-    // execute manual movement
-    tracker.manualAdjust(Tracker::Axis::Azimuth, aziDirection);
-    tracker.manualAdjust(Tracker::Axis::Elevation, eleDirection);
-  }
-
-  // display output
-
-  // write line 1 with all 16 chars
-  lcd.setCursor(0, 0);
-  switch (line1)
-  {
-    case DisplayLine1::Auto:
-      lcd.print("Mode: Auto      ");
-      break;
-
-    case DisplayLine1::Manual:
-      lcd.print("Mode: Manual    ");
-      break;
-
-    // empty case: do nothing
-    case DisplayLine1::Empty:
-      break;
-  }
-
-  switch (line2)
-  {
-    // special case: No split line
-    case DisplayLine2Full::HoldForAuto:
-      lcd.setCursor(0, 1);
-      lcd.print("Hold for Auto...");
-      break;
-
-    // empty case: do nothing
-    case DisplayLine2Full::Empty:
-      break;
-
-    // standard case: Split line
-    default:
-      printLine2(aziDirection, eleDirection);
-      break;
-  }
+  // execute State Machine
+  stateMachine.process();
 
   // loop throttling
   delay(100);
-}
-
-
-void printLine2(SolarTracker::Direction aziDir, SolarTracker::Direction eleDir)
-{
-  lcd.setCursor(0, 1);
-  lcd.print("Azi "); // 4
-  lcd.setCursor(4, 1); // TODO: Can this be removed?
-  printDirectionToString(aziDir); // 3
-  lcd.print(" "); // 1
-  lcd.setCursor(8, 1); // TODO: Can this be removed?
-  lcd.print("Ele "); // 4
-  lcd.setCursor(12, 1); // TODO: Can this be removed?
-  printDirectionToString(eleDir); // 3
-}
-
-void printDirectionToString(SolarTracker::Direction dir)
-{
-  switch (dir)
-  {
-    case SolarTracker::Direction::Positive:
-      lcd.print("Pos ");
-      break;
-    case SolarTracker::Direction::Negative:
-      lcd.print("Neg ");
-      break;
-    case SolarTracker::Direction::Stop:
-      lcd.print("Off ");
-      break;
-  }
-}
-
-void printTestMode()
-{
-  // get data
-  SolarTracker::InputInfo info = tracker.getInputInfo();
-
-  // print limit switch data
-  lcd.setCursor(1, 0);
-  lcd.print(info.limitSwElePos);
-  lcd.setCursor(1, 1);
-  lcd.print(info.limitSwEleNeg);
-  lcd.setCursor(0, 1);
-  lcd.print(info.limitSwAziNeg);
-  lcd.setCursor(2, 1);
-  lcd.print(info.limitSwAziPos);
-
-  // print LDR values
-  lcd.setCursor(7, 0);
-  if (info.ldrValTopLeft < 1000) lcd.print(" ");
-  lcd.print(info.ldrValTopLeft);
-  lcd.setCursor(12, 0);
-  if (info.ldrValTopRight < 1000) lcd.print(" ");
-  lcd.print(info.ldrValTopRight);
-  lcd.setCursor(7, 1);
-  if (info.ldrValBotLeft < 1000) lcd.print(" ");
-  lcd.print(info.ldrValBotLeft);
-  lcd.setCursor(12, 1);
-  if (info.ldrValBotRight < 1000) lcd.print(" ");
-  lcd.print(info.ldrValBotRight);
 }

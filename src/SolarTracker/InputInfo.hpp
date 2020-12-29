@@ -13,6 +13,9 @@ namespace SolarTracker
         uint16_t ldrValBotLeft;
         uint16_t ldrValBotRight;
 
+        uint16_t errorAzimuth;
+        uint16_t errorElevation;
+
         bool limitSwAziPos;
         bool limitSwAziNeg;
         bool limitSwElePos;

@@ -14,5 +14,6 @@
 #include "src/SolarTracker/InputInfo.hpp"
 #include "src/SolarTracker/OutputInfo.hpp"
 #include "src/SolarTracker/Tracker.hpp"
+#include "src/SolarTracker/States/StateMachine.hpp"
 
 #endif

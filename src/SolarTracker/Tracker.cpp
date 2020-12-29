@@ -154,14 +154,14 @@ namespace SolarTracker
         }
 
         // calculate errors
-        int16_t azimuthError = calcAzimuthError();
-        int16_t elevationError = calcElevationError();
+        m_azimuthError = calcAzimuthError();
+        m_elevationError = calcElevationError();
 
         // Azimuth correction
-        executeCorrection(m_aziAxis, azimuthError);
+        executeCorrection(m_aziAxis, m_azimuthError);
 
         // Elevation correction
-        executeCorrection(m_eleAxis, elevationError);
+        executeCorrection(m_eleAxis, m_elevationError);
     }
 
     uint8_t Tracker::calcPwmValue(uint16_t& error)
@@ -228,6 +228,15 @@ namespace SolarTracker
         result.limitSwAziNeg = m_driver->sense(m_aziAxis.channel, L298N_Driver::Command::Negative);
         result.limitSwElePos = m_driver->sense(m_eleAxis.channel, L298N_Driver::Command::Positive);
         result.limitSwEleNeg = m_driver->sense(m_eleAxis.channel, L298N_Driver::Command::Negative);
+
+        return result;
+    }
+
+    OutputInfo Tracker::getOutputInfo()
+    {
+        OutputInfo result = OutputInfo(Direction::Negative,0, Direction::Negative,0);
+
+        // TODO
 
         return result;
     }
