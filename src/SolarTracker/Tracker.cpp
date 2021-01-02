@@ -5,10 +5,10 @@ namespace SolarTracker
 {
     void Tracker::readLdrs()
     {
-        m_topLeftVal = analogRead(m_config.ldr_topLeftPin);
-        m_topRightVal = analogRead(m_config.ldr_topRightPin);
-        m_bottomLeftVal = analogRead(m_config.ldr_bottomLeftPin);
-        m_bottomRightVal = analogRead(m_config.ldr_bottomRightPin);
+        m_topLeftVal = ((m_topLeftVal * 0.875f) + (analogRead(m_config.ldr_topLeftPin)>>3));
+        m_topRightVal = ((m_topRightVal * 0.875f) + (analogRead(m_config.ldr_topRightPin)>>3));
+        m_bottomLeftVal = ((m_bottomLeftVal * 0.875f) + (analogRead(m_config.ldr_bottomLeftPin)>>3));
+        m_bottomRightVal = ((m_bottomRightVal * 0.875f) + (analogRead(m_config.ldr_bottomRightPin)>>3));
     }
 
     int16_t Tracker::calcAzimuthError() const
