@@ -68,7 +68,7 @@ namespace SolarTracker
         L298N_Driver* m_driver;
 
         // controller constants
-        static const uint8_t m_tolerance = 10;
+        static const uint8_t m_tolerance = 7;
         static const uint16_t m_shadowLevel = 500;
         static const uint8_t m_Kp_shift = 2;
 
