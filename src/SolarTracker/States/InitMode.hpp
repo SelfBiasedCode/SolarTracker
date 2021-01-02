@@ -19,9 +19,9 @@ namespace SolarTracker::States
         void init()
         {
             // print boot text
-            m_lcd.setCursor(0, 5);
+            m_lcd.setCursor(5, 0);
             m_lcd.print("Solar");
-            m_lcd.setCursor(1, 5);
+            m_lcd.setCursor(4, 1);
             m_lcd.print("Tracker");
         }
 

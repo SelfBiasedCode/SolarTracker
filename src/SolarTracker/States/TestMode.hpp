@@ -21,13 +21,13 @@ namespace SolarTracker::States
 
         void execute(Button button)
         {
-           
+
         }
 
         void display()
         {
             // get data
-            SolarTracker::InputInfo inData = m_tracker.getInputInfo();
+            SolarTracker::InputInfo inData = m_tracker.getInputInfo(false);
 
             // print limit switch data
             m_lcd.setCursor(1, 0);
@@ -40,17 +40,22 @@ namespace SolarTracker::States
             m_lcd.print(inData.limitSwAziPos);
 
             // print LDR values
+            // TODO: Smoothing
             m_lcd.setCursor(7, 0);
-            if (inData.ldrValTopLeft < 1000) m_lcd.print(" ");
+            m_lcd.print("    ");
+            m_lcd.setCursor(7, 0);
             m_lcd.print(inData.ldrValTopLeft);
             m_lcd.setCursor(12, 0);
-            if (inData.ldrValTopRight < 1000) m_lcd.print(" ");
+            m_lcd.print("    ");
+            m_lcd.setCursor(12, 0);
             m_lcd.print(inData.ldrValTopRight);
             m_lcd.setCursor(7, 1);
-            if (inData.ldrValBotLeft < 1000) m_lcd.print(" ");
+            m_lcd.print("    ");
+            m_lcd.setCursor(7, 1);
             m_lcd.print(inData.ldrValBotLeft);
             m_lcd.setCursor(12, 1);
-            if (inData.ldrValBotRight < 1000) m_lcd.print(" ");
+            m_lcd.print("    ");
+            m_lcd.setCursor(12, 1);
             m_lcd.print(inData.ldrValBotRight);
         }
 
@@ -62,6 +67,11 @@ namespace SolarTracker::States
     private:
         SolarTracker::Tracker& m_tracker;
         LiquidCrystal& m_lcd;
+
+        uint16_t ldrValTopLeft;
+        uint16_t ldrValTopRight;
+        uint16_t ldrValBotLeft;
+        uint16_t ldrValBotRight;
     };
 } // namespace
 

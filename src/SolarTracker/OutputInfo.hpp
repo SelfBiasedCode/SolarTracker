@@ -2,21 +2,21 @@
 #define OUTPUT_INFO_H
 
 #include <stdint.h>
-#include "Direction.hpp"
+#include "L298N_Driver.hpp"
 
 namespace SolarTracker
 {
     class OutputInfo
     {
     public:
-        OutputInfo(const Direction aziDir, const uint8_t aziSpeed, const Direction eleDir, const uint8_t eleSpeed) :
-            azimuthDirection(aziDir), azimuthSpeed(aziSpeed), elevationDirection(eleDir), elevationSpeed(eleSpeed) 
+        OutputInfo(const L298N_Driver::Command aziCmd, const uint8_t aziSpeed, const L298N_Driver::Command eleCmd, const uint8_t eleSpeed) :
+            azimuthCommand(aziCmd), azimuthSpeed(aziSpeed), elevationCommand(eleCmd), elevationSpeed(eleSpeed)
         {
         }
 
-        const Direction azimuthDirection;
+        const L298N_Driver::Command azimuthCommand;
         const uint8_t azimuthSpeed;
-        const Direction elevationDirection;
+        const L298N_Driver::Command elevationCommand;
         const uint8_t elevationSpeed;
     };
 }

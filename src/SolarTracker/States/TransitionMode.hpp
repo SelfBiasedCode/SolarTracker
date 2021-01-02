@@ -14,10 +14,10 @@ namespace SolarTracker::States
     {
     public:
 
-        TransitionMode(SolarTracker::Tracker& tracker, LiquidCrystal& lcd, uint8_t buttonHoldCycles) :m_currentButtonCount(0), m_maxButtonCount(buttonHoldCycles), m_tracker(tracker), m_lcd(lcd) {}
+        TransitionMode(SolarTracker::Tracker& tracker, LiquidCrystal& lcd, const uint8_t buttonHoldCycles) :m_currentButtonCount(0), m_maxButtonCount(buttonHoldCycles), m_tracker(tracker), m_lcd(lcd) {}
 
         void init(State requestedState, State currentState)
-        {          
+        {
             // reset and store data
             m_currentButtonCount = 0;
             m_reqState = requestedState;
@@ -55,16 +55,22 @@ namespace SolarTracker::States
 
         void display()
         {
-            m_lcd.setCursor(0, 4);
+            m_lcd.setCursor(4, 0);
             m_lcd.print("Hold for");
-            m_lcd.setCursor(1, 2);
+
             switch (m_reqState)
             {
             case State::Test:
+                m_lcd.setCursor(2, 1);
                 m_lcd.print("Test Mode...");
                 break;
             case State::Auto:
+                m_lcd.setCursor(2, 1);
                 m_lcd.print("Auto Mode...");
+                break;
+            case State::Manual:
+                m_lcd.setCursor(0, 1);
+                m_lcd.print("Manual Mode...");
                 break;
             default:
                 m_lcd.print("ERROR!");
@@ -82,11 +88,10 @@ namespace SolarTracker::States
         const uint8_t m_maxButtonCount;
         SolarTracker::Tracker& m_tracker;
         LiquidCrystal& m_lcd;
-        
+
         State m_reqState;
         State m_oldState;
     };
 } // namespace
-
 
 #endif

@@ -2,8 +2,7 @@
 #define L298N_DRIVER_HPP
 
 #include "Arduino.h"
-
-#define SENSE_INVERT
+#include "ChannelData.hpp"
 
 class L298N_Driver
 {
@@ -11,75 +10,87 @@ public:
     enum class Channel : uint8_t { Ch1 = 1, Ch2 = 2 };
     enum class Command : uint8_t { Positive, Negative, Brake, Off };
     L298N_Driver(const uint8_t ch1EnablePin, const uint8_t ch1PositivePin, const uint8_t ch1NegativePin, uint8_t const ch2EnablePin, const uint8_t ch2PositivePin, const uint8_t ch2NegativePin)
-        : m_ch1En(ch1EnablePin), m_ch1Pos(ch1PositivePin), m_ch1Neg(ch1NegativePin), m_ch2En(ch2EnablePin), m_ch2Pos(ch2PositivePin), m_ch2Neg(ch2NegativePin)
+        : m_ch1En(ch1EnablePin), m_ch1Data(ch1PositivePin, ch1NegativePin), m_ch2En(ch2EnablePin), m_ch2Data(ch2PositivePin, ch2NegativePin)
     {
     }
 
     void init()
     {
 #ifdef L298N_DRIVER_DEBUG
-        Serial.println("[L298N] init()");
+        Serial.print("[L298N] init()");
 #endif
         // set direction registers
         pinMode(m_ch1En, OUTPUT);
-        pinMode(m_ch1Pos, OUTPUT);
-        pinMode(m_ch1Neg, OUTPUT);
         pinMode(m_ch2En, OUTPUT);
-        pinMode(m_ch2Pos, OUTPUT);
-        pinMode(m_ch2Neg, OUTPUT);
 
         // set initial state
         analogWrite(m_ch1En, 0);
         analogWrite(m_ch2En, 0);
-        digitalWrite(m_ch1Pos, LOW);
-        digitalWrite(m_ch1Neg, LOW);
-        digitalWrite(m_ch2Pos, LOW);
-        digitalWrite(m_ch2Neg, LOW);
+
+        // init channel data
+        // get initial states for caching & implicitly set direction registers
+        m_ch1Data.getPosState(false);
+        m_ch1Data.getNegState(false);
+        m_ch2Data.getPosState(false);
+        m_ch2Data.getNegState(false);
+
+#ifdef L298N_DRIVER_DEBUG
+        Serial.println(" end");
+#endif
     }
 
-    bool sense(Channel channel, Command cmd)
+    bool sense(Channel channel, Command cmd, bool cached = false)
     {
-        uint8_t positivePin;
-        uint8_t negativePin;
-        bool result;
+#ifdef L298N_DRIVER_DEBUG
+        Serial.print("[L298N] sense()");
+#endif
+        ChannelData* chanData;
+
+        // this is also used as continuation indicator
+        bool result = true;
 
         // select pins
         switch (channel)
         {
         case Channel::Ch1:
-            positivePin = m_ch1Pos;
-            negativePin = m_ch1Neg;
+            chanData = &m_ch1Data;
             break;
         case Channel::Ch2:
-            positivePin = m_ch2Pos;
-            negativePin = m_ch2Neg;
+            chanData = &m_ch2Data;
             break;
         default:
-            return false;
+            // unknown channel: unable to handle
+            result = false;
         }
 
         // test
-        switch (cmd)
+        if (result)
         {
-        case Command::Positive:
-            pinMode(positivePin, INPUT);
-            result = digitalRead(positivePin);
-            pinMode(positivePin, OUTPUT);
-            break;
+            switch (cmd)
+            {
+            case Command::Positive:
+                result = chanData->getPosState(cached);
+                break;
 
-        case Command::Negative:
-            pinMode(negativePin, INPUT);
-            result = digitalRead(negativePin);
-            pinMode(negativePin, OUTPUT);
-            break;
+            case Command::Negative:
+                result = chanData->getNegState(cached);
+                break;
 
-        default:
-            result = false;
-            break;
+            case Command::Brake:
+            case Command::Off:
+                // always allowed
+                result = true;
+                break;
+
+            default:
+                // unknown command: unable to handle
+                result = false;
+                break;
+            }
         }
 
 #ifdef L298N_DRIVER_DEBUG
-        Serial.print("[L298N] sense(): Ch ");
+        Serial.print(" Ch ");
         Serial.print((uint8_t)channel);
         Serial.print(" , Cmd ");
         Serial.print((uint8_t)cmd);
@@ -94,30 +105,22 @@ public:
     {
         // test if the requested action is allowed
         bool allowed = sense(channel, cmd);
-
-#ifdef SENSE_INVERT
-        if (allowed) return false;
-#else
         if (!allowed) return false;
-#endif
 
         // processing variables
         uint8_t enPin;
-        uint8_t positivePin;
-        uint8_t negativePin;
+        ChannelData* chanData;
 
         // select pins
         switch (channel)
         {
         case Channel::Ch1:
             enPin = m_ch1En;
-            positivePin = m_ch1Pos;
-            negativePin = m_ch1Neg;
+            chanData = &m_ch1Data;
             break;
         case Channel::Ch2:
             enPin = m_ch2En;
-            positivePin = m_ch2Pos;
-            negativePin = m_ch2Neg;
+            chanData = &m_ch2Data;
             break;
         default:
             return false;
@@ -128,33 +131,33 @@ public:
         {
         case Command::Positive:
             analogWrite(enPin, dutyCycle);
-            digitalWrite(positivePin, HIGH);
-            digitalWrite(negativePin, LOW);
+            chanData->setPosState(true);
+            chanData->setNegState(false);
             break;
 
         case Command::Negative:
             analogWrite(enPin, dutyCycle);
-            digitalWrite(positivePin, LOW);
-            digitalWrite(negativePin, HIGH);
+            chanData->setPosState(false);
+            chanData->setNegState(true);
             break;
 
         case Command::Brake:
             analogWrite(enPin, dutyCycle);
-            digitalWrite(positivePin, HIGH);
-            digitalWrite(negativePin, HIGH);
+            chanData->setPosState(true);
+            chanData->setNegState(true);
             break;
 
         case Command::Off:
             analogWrite(enPin, 0);
-            digitalWrite(positivePin, LOW);
-            digitalWrite(negativePin, LOW);
+            chanData->setPosState(false);
+            chanData->setNegState(false);
             break;
         default:
             return false;
         }
 
 #ifdef L298N_DRIVER_DEBUG
-        Serial.print("[L298N] exec(): Ch ");
+        Serial.print(": Ch ");
         Serial.print((uint8_t)channel);
         Serial.print(" , Cmd ");
         Serial.print((uint8_t)cmd);
@@ -167,12 +170,11 @@ public:
     }
 
 private:
-    uint8_t m_ch1En;
-    uint8_t m_ch1Pos;
-    uint8_t m_ch1Neg;
-    uint8_t m_ch2En;
-    uint8_t m_ch2Pos;
-    uint8_t m_ch2Neg;
+    const uint8_t m_ch1En;
+    ChannelData m_ch1Data;
+    const uint8_t m_ch2En;
+    ChannelData m_ch2Data;
 };
 
 #endif
+

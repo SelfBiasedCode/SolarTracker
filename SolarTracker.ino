@@ -32,27 +32,24 @@ ldr_bottomRightPin: LDR_BOTRIGHT_PIN,
 motor_azimuth_signalPin: MOTOR_AZIMUTH_SIG_PIN,
 motor_azimuth_positivePin: MOTOR_AZIMUTH_POS,
 motor_azimuth_negativePin: MOTOR_AZIMUTH_NEG,
-  motor_azimuth_minPwm: 40,
+  motor_azimuth_minPwm: 50,
 motor_elevation_signalPin: MOTOR_ELEVATION_SIG_PIN,
 motor_elevation_positivePin: MOTOR_ELEVATION_POS,
 motor_elevation_negativePin: MOTOR_ELEVATION_NEG,
-  motor_elevation_minPwm: 40,
+  motor_elevation_minPwm: 60,
 };
 Tracker tracker(trackerConfig);
 States::StateMachine stateMachine(tracker, lcd, BUTTONS_PIN);
 
 // UI
-uint8_t buttonCounter;
-bool autoMode;
-#define MODE_SWITCH_INVOCATION_COUNT 10
-#define TEST_MODE // comment this out to enable auto mode
 #define DEBUG
 
 void setup()
 {
-  buttonCounter = 0;
-  autoMode = false;
-
+#ifdef DEBUG
+  Serial.begin(9600);
+  Serial.println("init()");
+#endif
   // initialize Tracker
   tracker.init();
 
@@ -62,9 +59,7 @@ void setup()
   // initizalize State Machine
   stateMachine.init();
 
-#ifdef DEBUG
-  Serial.begin(9600);
-#endif
+
 }
 
 void loop()

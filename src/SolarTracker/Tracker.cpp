@@ -25,41 +25,52 @@ namespace SolarTracker
     // modifies axis and pwmTarget in-place
     void Tracker::smoothPwm(AxisData& axis, uint8_t& pwmTarget)
     {
-        uint8_t maxChange;
+        uint8_t newTarget = pwmTarget;
+
+        int16_t maxChange;
         if (pwmTarget > axis.lastPwmValue)
         {
+
             maxChange = (axis.lastPwmValue + m_maxPwmStep);
-            if (maxChange < pwmTarget)
+            if (maxChange < pwmTarget && maxChange < 255)
             {
-                pwmTarget = maxChange;
+
+                newTarget = maxChange;
             }
         }
         else
         {
+
             maxChange = (axis.lastPwmValue - m_maxPwmStep);
-            if (maxChange > pwmTarget)
+            if (maxChange > pwmTarget && maxChange > 0)
             {
-                pwmTarget = maxChange;
+
+                newTarget = maxChange;
             }
         }
 
-        if (pwmTarget < axis.minPwmValue && pwmTarget > 0)
+        if (newTarget < axis.minPwmValue && pwmTarget > 0)
         {
-            pwmTarget = axis.minPwmValue;
+
+            newTarget = axis.minPwmValue;
         }
 
-        axis.lastPwmValue = pwmTarget;
+        axis.lastPwmValue = newTarget;
+
+
     }
 
     // smoothes motion in any direction
     void Tracker::execSmooth(AxisData& axis, L298N_Driver::Command targetCommand, uint8_t targetSpeed)
     {
+
         // slow to zero if direction is different and last command was not Off
         if (targetCommand != axis.lastCommand && axis.lastCommand != L298N_Driver::Command::Off)
         {
             // if min PWM was reached last time, assume it's safe to turn around
-            if (axis.lastPwmValue == axis.minPwmValue)
+            if (axis.lastPwmValue <= axis.minPwmValue)
             {
+
                 axis.lastCommand = L298N_Driver::Command::Off;
                 axis.lastPwmValue = 0;
                 m_driver->exec(axis.channel, axis.lastCommand, axis.lastPwmValue);
@@ -69,6 +80,11 @@ namespace SolarTracker
                 // min PWM not yet reached -> deccelerate
                 targetSpeed = 0;
             }
+        }
+        else
+        {
+
+            axis.lastCommand = targetCommand;
         }
 
         // smooth & execute
@@ -181,6 +197,7 @@ namespace SolarTracker
 
     void Tracker::manualAdjust(Axis axis, Direction direction)
     {
+
         AxisData* axisData;
         switch (axis)
         {
@@ -212,7 +229,7 @@ namespace SolarTracker
         }
     }
 
-    InputInfo Tracker::getInputInfo()
+    InputInfo Tracker::getInputInfo(bool cached)
     {
         InputInfo result = InputInfo();
 
@@ -223,20 +240,22 @@ namespace SolarTracker
         result.ldrValBotLeft = m_bottomLeftVal;
         result.ldrValBotRight = m_bottomRightVal;
 
-        // get limit switch data
-        result.limitSwAziPos = m_driver->sense(m_aziAxis.channel, L298N_Driver::Command::Positive);
-        result.limitSwAziNeg = m_driver->sense(m_aziAxis.channel, L298N_Driver::Command::Negative);
-        result.limitSwElePos = m_driver->sense(m_eleAxis.channel, L298N_Driver::Command::Positive);
-        result.limitSwEleNeg = m_driver->sense(m_eleAxis.channel, L298N_Driver::Command::Negative);
+        // TODO: Cache?
+        result.errorAzimuth = calcAzimuthError();
+        result.errorElevation = calcElevationError();
+
+        // get cached limit switch data
+        result.limitSwAziPos = !m_driver->sense(m_aziAxis.channel, L298N_Driver::Command::Positive, cached);
+        result.limitSwAziNeg = !m_driver->sense(m_aziAxis.channel, L298N_Driver::Command::Negative, cached);
+        result.limitSwElePos = !m_driver->sense(m_eleAxis.channel, L298N_Driver::Command::Positive, cached);
+        result.limitSwEleNeg = !m_driver->sense(m_eleAxis.channel, L298N_Driver::Command::Negative, cached);
 
         return result;
     }
 
     OutputInfo Tracker::getOutputInfo()
     {
-        OutputInfo result = OutputInfo(Direction::Negative,0, Direction::Negative,0);
-
-        // TODO
+        OutputInfo result = OutputInfo(m_aziAxis.lastCommand, m_aziAxis.lastPwmValue, m_eleAxis.lastCommand, m_eleAxis.lastPwmValue);
 
         return result;
     }

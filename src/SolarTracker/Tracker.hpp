@@ -7,7 +7,6 @@
 #include "InputInfo.hpp"
 #include "OutputInfo.hpp"
 #include "L298N_Driver.hpp"
-
 namespace SolarTracker
 {
     class Tracker
@@ -17,7 +16,7 @@ namespace SolarTracker
         {
             // instantiate driver
             m_driver = new L298N_Driver(m_config.motor_azimuth_signalPin, m_config.motor_azimuth_positivePin, m_config.motor_azimuth_negativePin, m_config.motor_elevation_signalPin, m_config.motor_elevation_positivePin, m_config.motor_elevation_negativePin);
-            
+
             // reset values
             m_topLeftVal = 0;
             m_topRightVal = 0;
@@ -39,7 +38,7 @@ namespace SolarTracker
 
         void autoAdjust();
         void manualAdjust(Axis axis, Direction direction);
-        InputInfo getInputInfo();
+        InputInfo getInputInfo(bool cached = true);
         OutputInfo getOutputInfo();
 
     private:
@@ -69,13 +68,13 @@ namespace SolarTracker
         L298N_Driver* m_driver;
 
         // controller constants
-        static const uint8_t m_tolerance = 10;
-        static const uint16_t m_shadowLevel = 100;
-        static const uint8_t m_Kp_shift = 0;
+        static const uint8_t m_tolerance = 5;
+        static const uint16_t m_shadowLevel = 500;
+        static const uint8_t m_Kp_shift = 2;
 
         // PWM constants
-        static const uint8_t m_speedManual = 100;
-        static const uint8_t m_maxPwmStep = 25;
+        static const uint8_t m_speedManual = 150;
+        static const uint8_t m_maxPwmStep = 50;
     };
 }
 #endif

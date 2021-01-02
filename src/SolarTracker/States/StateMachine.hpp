@@ -2,7 +2,7 @@
 #define STATE_MACHINE_H
 
 #include <LiquidCrystal.h>
-
+//#include "Arduino.h"
 #include "Button.hpp"
 #include "State.hpp"
 #include "TestMode.hpp"
@@ -50,7 +50,6 @@ namespace SolarTracker::States
         void process()
         {
             Button button = readButtonState();
-
             State nextState = m_currentState;
             // determine next state
             switch (m_currentState)
@@ -70,8 +69,11 @@ namespace SolarTracker::States
                 // check if auto mode is requested
                 if (button == Button::Select)
                 {
-                    m_transMode.init(State::Auto, m_currentState);
                     nextState = State::Transition;
+                    // TODO
+                    m_lcd.clear();
+                    m_transMode.init(State::Auto, m_currentState);
+                    m_currentState = nextState;
                 }
                 break;
 
@@ -82,6 +84,14 @@ namespace SolarTracker::States
                     // switch immediately
                     nextState = State::Manual;
                 }
+                else if (button == Button::Select)
+                {
+                    nextState = State::Transition;
+                    // TODO
+                    m_lcd.clear();
+                    m_transMode.init(State::Test, m_currentState);
+                    m_currentState = nextState;
+                }
                 break;
 
             case State::Transition:
@@ -89,7 +99,17 @@ namespace SolarTracker::States
                 nextState = m_transMode.process(button);
                 break;
 
-            default: 
+            case State::Test:
+                if (button == Button::Select)
+                {
+                    nextState = State::Transition;
+                    // TODO
+                    m_lcd.clear();
+                    m_transMode.init(State::Manual, m_currentState);
+                    m_currentState = nextState;
+                }
+                break;
+            default:
                 // TODO: Error?
                 break;
             }

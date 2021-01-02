@@ -6,6 +6,7 @@
 #include "../InputInfo.hpp"
 #include "../OutputInfo.hpp"
 #include "Button.hpp"
+#include "../L298N_Driver.hpp"
 
 namespace SolarTracker::States
 {
@@ -19,7 +20,7 @@ namespace SolarTracker::States
             // print static components
             m_lcd.setCursor(0, 0);
             m_lcd.print("AU A:    SPD:");
-            m_lcd.setCursor(1, 0);
+            m_lcd.setCursor(0, 1);
             m_lcd.print("TO E:    SPD:");
         }
 
@@ -40,43 +41,54 @@ namespace SolarTracker::States
             SolarTracker::OutputInfo outData = m_tracker.getOutputInfo();
 
             // print azimuth information
-            m_lcd.setCursor(0, 5);
-            switch (outData.azimuthDirection)
+            m_lcd.setCursor(5, 0);
+            switch (outData.azimuthCommand)
             {
-            case SolarTracker::Direction::Positive:
+            case L298N_Driver::Command::Positive:
                 m_lcd.print("POS");
                 break;
 
-            case SolarTracker::Direction::Negative:
+            case L298N_Driver::Command::Negative:
                 m_lcd.print("NEG");
                 break;
 
-            case SolarTracker::Direction::Stop:
+            case L298N_Driver::Command::Brake:
+                m_lcd.print("BRK");
+                break;
+
+            case L298N_Driver::Command::Off:
                 m_lcd.print("OFF");
                 break;
             }
-
-            m_lcd.setCursor(0, 13);
+            // TODO
+            m_lcd.setCursor(13, 0);
+            m_lcd.print("   ");
+            m_lcd.setCursor(13, 0);
             m_lcd.print(outData.azimuthSpeed);
 
             // print elevation information
-            m_lcd.setCursor(1, 5);
-            switch (outData.elevationDirection)
+            m_lcd.setCursor(5, 1);
+            switch (outData.elevationCommand)
             {
-            case SolarTracker::Direction::Positive:
+            case L298N_Driver::Command::Positive:
                 m_lcd.print("POS");
                 break;
 
-            case SolarTracker::Direction::Negative:
+            case L298N_Driver::Command::Negative:
                 m_lcd.print("NEG");
                 break;
 
-            case SolarTracker::Direction::Stop:
+            case L298N_Driver::Command::Brake:
+                m_lcd.print("BRK");
+                break;
+
+            case L298N_Driver::Command::Off:
                 m_lcd.print("OFF");
                 break;
             }
-
-            m_lcd.setCursor(1, 13);
+            m_lcd.setCursor(13, 1);
+            m_lcd.print("   ");
+            m_lcd.setCursor(13, 1);
             m_lcd.print(outData.elevationSpeed);
         }
 

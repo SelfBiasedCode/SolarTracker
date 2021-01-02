@@ -18,7 +18,7 @@ namespace SolarTracker::States
             // print static components
             m_lcd.setCursor(0, 0);
             m_lcd.print("A:");
-            m_lcd.setCursor(1, 0);
+            m_lcd.setCursor(0, 1);
             m_lcd.print("E:");
         }
 
@@ -70,7 +70,8 @@ namespace SolarTracker::States
             SolarTracker::InputInfo inData = m_tracker.getInputInfo();
 
             // print azimuth information
-            m_lcd.setCursor(0, 2);
+            m_lcd.setCursor(2, 0);
+            
             if (inData.limitSwAziPos)
             {
                 m_lcd.print("Limit+");
@@ -83,12 +84,15 @@ namespace SolarTracker::States
             {
                 m_lcd.print("Free   ");
             }
+            
 
-            m_lcd.setCursor(0, 10);
+            m_lcd.setCursor(10, 0);
+            m_lcd.print("     ");
+            m_lcd.setCursor(10, 0);
             m_lcd.print(inData.errorAzimuth);
 
             // print elevation information
-            m_lcd.setCursor(1, 2);
+            m_lcd.setCursor(2, 1);
             if (inData.limitSwElePos)
             {
                 m_lcd.print("Limit+");
@@ -102,7 +106,9 @@ namespace SolarTracker::States
                 m_lcd.print("Free   ");
             }
 
-            m_lcd.setCursor(1, 10);
+            m_lcd.setCursor(10, 1);
+            m_lcd.print("     ");
+            m_lcd.setCursor(10, 1);
             m_lcd.print(inData.errorElevation);
         }
 
